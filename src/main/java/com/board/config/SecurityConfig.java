@@ -34,7 +34,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 // 비로그인 허용 경로
-                .requestMatchers("/", "/auth/**", "/css/**", "/js/**").permitAll()
+                .requestMatchers("/", "/auth/**", "/css/**", "/js/**", "/favicon.svg").permitAll()
                 .requestMatchers("/board").permitAll()
                 .requestMatchers("/board/{id:[0-9]+}").permitAll()  // 게시글 상세 조회만 허용
                 // 게시글 작성/수정/삭제, 댓글, 좋아요, 마이페이지는 로그인 필요
