@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(./mvnw compile *)",
-      "Bash(mvn -f C:/Users/SBS/board-project/pom.xml compile -q)",
-      "Bash(where mvn *)"
-    ]
-  }
-}
