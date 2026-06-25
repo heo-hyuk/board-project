@@ -24,12 +24,12 @@
                 <div class="card auth-card">
                     <div class="card-body p-4">
 
-                        <!-- 전체 오류 -->
-                        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
-                            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}" class="mb-0"></p>
-                        </div>
-
                         <form th:action="@{/auth/join}" method="post" th:object="${userJoinDto}">
+
+                            <!-- 전체 오류 (form 안에 있어야 #fields 사용 가능) -->
+                            <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+                                <p th:each="err : ${#fields.globalErrors()}" th:text="${err}" class="mb-0"></p>
+                            </div>
 
                             <!-- 아이디 -->
                             <div class="mb-3">
