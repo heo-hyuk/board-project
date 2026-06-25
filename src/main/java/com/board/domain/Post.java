@@ -22,6 +22,9 @@ public class Post {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(nullable = false, length = 20)
+    private String category = "자유"; // 공지 / 자유 / 질문 / 프로젝트 / 취업/커리어
+
     // 작성자 (N:1)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -48,18 +51,20 @@ public class Post {
     }
 
     // 생성 메서드
-    public static Post create(String title, String content, User user) {
+    public static Post create(String title, String content, String category, User user) {
         Post post = new Post();
         post.title = title;
         post.content = content;
+        post.category = (category != null && !category.isBlank()) ? category : "자유";
         post.user = user;
         return post;
     }
 
     // 게시글 수정
-    public void update(String title, String content) {
+    public void update(String title, String content, String category) {
         this.title = title;
         this.content = content;
+        this.category = (category != null && !category.isBlank()) ? category : "자유";
     }
 
     // 조회수 증가

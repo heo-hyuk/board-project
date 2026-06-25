@@ -3,7 +3,7 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>게시글 목록</title>
+    <title>CodeLog</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link th:href="@{/css/style.css}" rel="stylesheet">
 </head>
@@ -13,22 +13,35 @@
 <div class="container mt-4 mb-5">
 
     <!-- 성공 메시지 (자동 닫힘) -->
-    <div th:if="${successMsg}" class="alert alert-success alert-auto-close d-flex justify-content-between align-items-center">
-        <span th:text="${successMsg}"></span>
+    <div th:if="${successMsg}" class="alert alert-success alert-auto-close" th:text="${successMsg}"></div>
+
+    <!-- 헤더 -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 fw-bold">게시글</h5>
+        <a th:href="@{/board/write}" sec:authorize="isAuthenticated()"
+           class="btn btn-dark btn-sm">＋ 글쓰기</a>
     </div>
 
-    <!-- 헤더 영역 -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h5 class="mb-0 fw-bold">게시글</h5>
-            <span class="text-muted" style="font-size:0.82rem;">
-                총 <strong th:text="${totalCount}">0</strong>개
-            </span>
-        </div>
-        <a th:href="@{/board/write}" sec:authorize="isAuthenticated()"
-           class="btn btn-dark btn-sm d-flex align-items-center gap-1">
-            ＋ 글쓰기
-        </a>
+    <!-- 카테고리 탭 -->
+    <div class="category-tabs">
+        <a class="category-tab"
+           th:href="@{/board(category='', keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+           th:classappend="${searchDto.category == null or searchDto.category == ''} ? 'active'">전체</a>
+        <a class="category-tab"
+           th:href="@{/board(category='공지', keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+           th:classappend="${searchDto.category == '공지'} ? 'active'">📢 공지</a>
+        <a class="category-tab"
+           th:href="@{/board(category='자유', keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+           th:classappend="${searchDto.category == '자유'} ? 'active'">💬 자유</a>
+        <a class="category-tab"
+           th:href="@{/board(category='질문', keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+           th:classappend="${searchDto.category == '질문'} ? 'active'">❓ 질문</a>
+        <a class="category-tab"
+           th:href="@{/board(category='프로젝트', keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+           th:classappend="${searchDto.category == '프로젝트'} ? 'active'">💡 프로젝트</a>
+        <a class="category-tab"
+           th:href="@{/board(category='취업/커리어', keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+           th:classappend="${searchDto.category == '취업/커리어'} ? 'active'">🔥 취업/커리어</a>
     </div>
 
     <!-- 게시글 테이블 -->
@@ -53,7 +66,7 @@
                             <span th:if="${searchDto.keyword != null and !searchDto.keyword.isEmpty()}">
                                 "<span th:text="${searchDto.keyword}"></span>" 검색 결과가 없습니다.
                             </span>
-                            <span th:if="${searchDto.keyword == null or searchDto.keyword.isEmpty()}">
+                            <span th:unless="${searchDto.keyword != null and !searchDto.keyword.isEmpty()}">
                                 아직 게시글이 없습니다. 첫 번째 글을 작성해보세요!
                             </span>
                         </div>
@@ -64,6 +77,11 @@
             <tr th:each="post : ${posts}">
                 <td class="text-muted" style="font-size:0.82rem;" th:text="${post.id}"></td>
                 <td>
+                    <!-- 카테고리 뱃지 -->
+                    <span th:if="${post.category != null}"
+                          class="category-badge me-1"
+                          th:classappend="'cat-' + ${post.category == '취업/커리어' ? '취업' : post.category}"
+                          th:text="${post.category}"></span>
                     <a th:href="@{/board/{id}(id=${post.id})}"
                        class="post-title-link"
                        th:text="${post.title}"></a>
@@ -73,7 +91,6 @@
                 <td style="font-size:0.875rem; color:var(--text-muted);" th:text="${post.nickname}"></td>
                 <td style="text-align:center; font-size:0.82rem; color:var(--text-light);" th:text="${post.viewCount}"></td>
                 <td>
-                    <!-- 날짜: JS로 상대 시간 변환 -->
                     <span class="rel-time text-muted"
                           style="font-size:0.82rem;"
                           th:attr="data-time=${#temporals.format(post.createdAt, 'yyyy-MM-dd''T''HH:mm:ss')}"
@@ -85,9 +102,16 @@
         </table>
     </div>
 
+    <!-- 총 게시글 수 -->
+    <div class="text-muted mb-2" style="font-size:0.82rem;">
+        총 <strong th:text="${totalCount}">0</strong>개
+    </div>
+
     <!-- 검색 바 -->
     <div class="search-bar mb-3">
         <form th:action="@{/board}" method="get" class="d-flex gap-2 align-items-center">
+            <!-- 카테고리 유지 -->
+            <input type="hidden" name="category" th:value="${searchDto.category}">
             <select name="searchType" class="form-select">
                 <option value="all"     th:selected="${searchDto.searchType == 'all'     or searchDto.searchType == null}">제목+내용</option>
                 <option value="title"   th:selected="${searchDto.searchType == 'title'}">제목</option>
@@ -97,38 +121,29 @@
                    placeholder="검색어를 입력하세요"
                    th:value="${searchDto.keyword}">
             <button type="submit" class="btn btn-dark flex-shrink-0">검색</button>
-            <!-- 검색 중일 때 초기화 버튼 -->
             <a th:if="${searchDto.keyword != null and !searchDto.keyword.isEmpty()}"
-               th:href="@{/board}" class="btn btn-outline-secondary flex-shrink-0">초기화</a>
+               th:href="@{/board(category=${searchDto.category})}"
+               class="btn btn-outline-secondary flex-shrink-0">초기화</a>
         </form>
     </div>
 
     <!-- 페이지네이션 -->
     <nav th:if="${totalPages > 1}">
         <ul class="pagination justify-content-center">
-            <!-- 이전 버튼 -->
             <li class="page-item" th:classappend="${currentPage == 1} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/board(page=${currentPage - 1}, keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}">
-                    ‹
-                </a>
+                   th:href="@{/board(page=${currentPage - 1}, category=${searchDto.category}, keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}">‹</a>
             </li>
-
-            <!-- 페이지 번호 -->
             <li class="page-item"
                 th:each="i : ${#numbers.sequence(1, totalPages)}"
                 th:classappend="${i == currentPage} ? 'active'">
                 <a class="page-link"
-                   th:href="@{/board(page=${i}, keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
+                   th:href="@{/board(page=${i}, category=${searchDto.category}, keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}"
                    th:text="${i}"></a>
             </li>
-
-            <!-- 다음 버튼 -->
             <li class="page-item" th:classappend="${currentPage == totalPages} ? 'disabled'">
                 <a class="page-link"
-                   th:href="@{/board(page=${currentPage + 1}, keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}">
-                    ›
-                </a>
+                   th:href="@{/board(page=${currentPage + 1}, category=${searchDto.category}, keyword=${searchDto.keyword}, searchType=${searchDto.searchType})}">›</a>
             </li>
         </ul>
     </nav>
@@ -137,23 +152,22 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-/* 상대 시간 변환 */
 function relativeTime(dateStr) {
     const now = new Date();
     const past = new Date(dateStr);
-    const diff = Math.floor((now - past) / 1000); // 초 단위
-
-    if (diff < 60)           return '방금 전';
-    if (diff < 3600)         return Math.floor(diff / 60) + '분 전';
-    if (diff < 86400)        return Math.floor(diff / 3600) + '시간 전';
-    if (diff < 86400 * 7)    return Math.floor(diff / 86400) + '일 전';
-    // 7일 이상은 날짜 그대로
+    const diff = Math.floor((now - past) / 1000);
+    if (diff < 60)         return '방금 전';
+    if (diff < 3600)       return Math.floor(diff / 60) + '분 전';
+    if (diff < 86400)      return Math.floor(diff / 3600) + '시간 전';
+    if (diff < 86400 * 7)  return Math.floor(diff / 86400) + '일 전';
     return dateStr.substring(0, 10);
 }
-
 document.querySelectorAll('.rel-time').forEach(el => {
     const t = el.getAttribute('data-time');
     if (t) el.textContent = relativeTime(t);
+});
+document.querySelectorAll('.alert-auto-close').forEach(el => {
+    setTimeout(() => el.remove(), 4000);
 });
 </script>
 </body>

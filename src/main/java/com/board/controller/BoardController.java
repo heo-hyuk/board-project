@@ -60,6 +60,7 @@ public class BoardController {
     @PostMapping("/write")
     public String write(@RequestParam String title,
                         @RequestParam String content,
+                        @RequestParam(defaultValue = "자유") String category,
                         @AuthenticationPrincipal UserDetails userDetails,
                         RedirectAttributes redirectAttributes,
                         Model model) {
@@ -72,7 +73,7 @@ public class BoardController {
             model.addAttribute("errorMsg", "내용을 입력해주세요.");
             return "board/write";
         }
-        Long postId = postService.write(title.trim(), content, userDetails.getUsername());
+        Long postId = postService.write(title.trim(), content, category, userDetails.getUsername());
         redirectAttributes.addFlashAttribute("successMsg", "게시글이 작성되었습니다.");
         return "redirect:/board/" + postId;
     }
@@ -95,6 +96,7 @@ public class BoardController {
     public String edit(@PathVariable Long id,
                        @RequestParam String title,
                        @RequestParam String content,
+                       @RequestParam(defaultValue = "자유") String category,
                        @AuthenticationPrincipal UserDetails userDetails,
                        RedirectAttributes redirectAttributes,
                        Model model) {
@@ -109,7 +111,7 @@ public class BoardController {
             model.addAttribute("post", postService.findByIdReadOnly(id));
             return "board/edit";
         }
-        postService.update(id, title.trim(), content, userDetails.getUsername());
+        postService.update(id, title.trim(), content, category, userDetails.getUsername());
         redirectAttributes.addFlashAttribute("successMsg", "게시글이 수정되었습니다.");
         return "redirect:/board/" + id;
     }

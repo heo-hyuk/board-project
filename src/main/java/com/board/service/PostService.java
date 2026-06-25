@@ -55,23 +55,23 @@ public class PostService {
 
     // 게시글 작성 (JPA)
     @Transactional
-    public Long write(String title, String content, String username) {
+    public Long write(String title, String content, String category, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-        Post post = Post.create(title, content, user);
+        Post post = Post.create(title, content, category, user);
         return postRepository.save(post).getId();
     }
 
     // 게시글 수정 (JPA)
     @Transactional
-    public void update(Long postId, String title, String content, String username) {
+    public void update(Long postId, String title, String content, String category, String username) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
         // 작성자 본인 확인
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
-        post.update(title, content);
+        post.update(title, content, category);
     }
 
     // 게시글 삭제 (JPA)

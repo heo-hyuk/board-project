@@ -19,6 +19,11 @@
     <div class="card mb-3">
         <!-- 게시글 헤더 -->
         <div class="card-header">
+            <!-- 카테고리 뱃지 -->
+            <span th:if="${post.category != null}"
+                  class="category-badge mb-2 d-inline-block"
+                  th:classappend="'cat-' + ${post.category == '취업/커리어' ? '취업' : post.category}"
+                  th:text="${post.category}"></span>
             <h5 class="mb-2 fw-bold" style="line-height:1.4;" th:text="${post.title}"></h5>
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="post-meta">

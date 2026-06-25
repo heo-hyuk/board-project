@@ -17,4 +17,5 @@ public class PostDto {
     private String nickname; // 작성자 닉네임 (JOIN 결과)
     private Long userId;
     private int commentCount; // 댓글 수
+    private String category;  // 카테고리
 }

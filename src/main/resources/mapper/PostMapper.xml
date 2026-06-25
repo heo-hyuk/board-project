@@ -12,12 +12,18 @@
             p.content,
             p.view_count,
             p.created_at,
+            p.category,
             u.nickname,
             u.id AS user_id,
             (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
         FROM posts p
         JOIN users u ON p.user_id = u.id
         <where>
+            <!-- 카테고리 필터 -->
+            <if test="category != null and category != ''">
+                AND p.category = #{category}
+            </if>
+            <!-- 키워드 검색 -->
             <choose>
                 <when test="searchType == 'title'">
                     AND p.title LIKE CONCAT('%', #{keyword}, '%')
@@ -26,7 +32,6 @@
                     AND p.content LIKE CONCAT('%', #{keyword}, '%')
                 </when>
                 <otherwise>
-                    <!-- 제목 + 내용 통합 검색 -->
                     <if test="keyword != null and keyword != ''">
                         AND (p.title LIKE CONCAT('%', #{keyword}, '%')
                         OR p.content LIKE CONCAT('%', #{keyword}, '%'))
@@ -43,6 +48,11 @@
         SELECT COUNT(*)
         FROM posts p
         <where>
+            <!-- 카테고리 필터 -->
+            <if test="category != null and category != ''">
+                AND p.category = #{category}
+            </if>
+            <!-- 키워드 검색 -->
             <choose>
                 <when test="searchType == 'title'">
                     AND p.title LIKE CONCAT('%', #{keyword}, '%')

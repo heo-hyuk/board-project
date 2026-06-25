@@ -265,6 +265,59 @@ a:hover { text-decoration: none; }
 }
 
 /* ===========================
+   카테고리 탭
+   =========================== */
+.category-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.category-tabs::-webkit-scrollbar { display: none; }
+
+.category-tab {
+    padding: 0.6rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border: none;
+    background: none;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    text-decoration: none;
+    transition: all var(--transition);
+}
+
+.category-tab:hover { color: var(--text); }
+
+.category-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 700;
+}
+
+/* 카테고리 뱃지 */
+.category-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.cat-공지    { background: #fee2e2; color: #dc2626; }
+.cat-자유    { background: #e0f2fe; color: #0284c7; }
+.cat-질문    { background: #fef9c3; color: #ca8a04; }
+.cat-프로젝트 { background: #dcfce7; color: #16a34a; }
+.cat-취업    { background: #f3e8ff; color: #9333ea; }
+
+/* ===========================
    검색 바
    =========================== */
 .search-bar {
