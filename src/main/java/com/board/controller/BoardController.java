@@ -42,10 +42,15 @@ public class BoardController {
         Post post = postService.findById(id);
         model.addAttribute("post", post);
         model.addAttribute("comments", commentService.findByPost(id));
-        // 작성자 본인 여부 확인 (수정/삭제 버튼 표시용)
-        if (userDetails != null) {
-            model.addAttribute("isAuthor", post.getUser().getUsername().equals(userDetails.getUsername()));
-            model.addAttribute("loginUsername", userDetails.getUsername());
+        model.addAttribute("likeCount", postService.getLikeCount(id));
+
+        String username = (userDetails != null) ? userDetails.getUsername() : null;
+        if (username != null) {
+            model.addAttribute("isAuthor", post.getUser().getUsername().equals(username));
+            model.addAttribute("loginUsername", username);
+            model.addAttribute("liked", postService.isLikedByUser(id, username));
+        } else {
+            model.addAttribute("liked", false);
         }
         return "board/detail";
     }
@@ -61,10 +66,10 @@ public class BoardController {
     public String write(@RequestParam String title,
                         @RequestParam String content,
                         @RequestParam(defaultValue = "자유") String category,
+                        @RequestParam(required = false) String tags,
                         @AuthenticationPrincipal UserDetails userDetails,
                         RedirectAttributes redirectAttributes,
                         Model model) {
-        // 입력값 검증
         if (title.isBlank() || title.length() > 200) {
             model.addAttribute("errorMsg", "제목은 1~200자 이내로 입력해주세요.");
             return "board/write";
@@ -73,7 +78,7 @@ public class BoardController {
             model.addAttribute("errorMsg", "내용을 입력해주세요.");
             return "board/write";
         }
-        Long postId = postService.write(title.trim(), content, category, userDetails.getUsername());
+        Long postId = postService.write(title.trim(), content, category, tags, userDetails.getUsername());
         redirectAttributes.addFlashAttribute("successMsg", "게시글이 작성되었습니다.");
         return "redirect:/board/" + postId;
     }
@@ -97,10 +102,10 @@ public class BoardController {
                        @RequestParam String title,
                        @RequestParam String content,
                        @RequestParam(defaultValue = "자유") String category,
+                       @RequestParam(required = false) String tags,
                        @AuthenticationPrincipal UserDetails userDetails,
                        RedirectAttributes redirectAttributes,
                        Model model) {
-        // 입력값 검증
         if (title.isBlank() || title.length() > 200) {
             model.addAttribute("errorMsg", "제목은 1~200자 이내로 입력해주세요.");
             model.addAttribute("post", postService.findByIdReadOnly(id));
@@ -111,7 +116,7 @@ public class BoardController {
             model.addAttribute("post", postService.findByIdReadOnly(id));
             return "board/edit";
         }
-        postService.update(id, title.trim(), content, category, userDetails.getUsername());
+        postService.update(id, title.trim(), content, category, tags, userDetails.getUsername());
         redirectAttributes.addFlashAttribute("successMsg", "게시글이 수정되었습니다.");
         return "redirect:/board/" + id;
     }

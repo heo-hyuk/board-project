@@ -604,6 +604,69 @@ a:hover { text-decoration: none; }
 }
 
 /* ===========================
+   좋아요 버튼
+   =========================== */
+.like-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.like-btn:hover {
+    border-color: #f87171;
+    color: var(--danger);
+    background: #fef2f2;
+}
+
+.like-btn.liked {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: #fef2f2;
+}
+
+.like-btn .heart { font-size: 1rem; }
+
+/* ===========================
+   태그
+   =========================== */
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    text-decoration: none;
+    transition: all var(--transition);
+}
+
+.tag-pill:hover {
+    background: #eff6ff;
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.tag-input-hint {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-top: 4px;
+}
+
+/* ===========================
    반응형
    =========================== */
 @media (max-width: 768px) {

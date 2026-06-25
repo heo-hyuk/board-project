@@ -15,13 +15,22 @@
             p.category,
             u.nickname,
             u.id AS user_id,
-            (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
+            (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
+            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS like_count
         FROM posts p
         JOIN users u ON p.user_id = u.id
         <where>
             <!-- 카테고리 필터 -->
             <if test="category != null and category != ''">
                 AND p.category = #{category}
+            </if>
+            <!-- 태그 필터 -->
+            <if test="tag != null and tag != ''">
+                AND p.id IN (
+                    SELECT pt.post_id FROM post_tags pt
+                    JOIN tags t ON pt.tag_id = t.id
+                    WHERE t.name = #{tag}
+                )
             </if>
             <!-- 키워드 검색 -->
             <choose>
@@ -48,11 +57,16 @@
         SELECT COUNT(*)
         FROM posts p
         <where>
-            <!-- 카테고리 필터 -->
             <if test="category != null and category != ''">
                 AND p.category = #{category}
             </if>
-            <!-- 키워드 검색 -->
+            <if test="tag != null and tag != ''">
+                AND p.id IN (
+                    SELECT pt.post_id FROM post_tags pt
+                    JOIN tags t ON pt.tag_id = t.id
+                    WHERE t.name = #{tag}
+                )
+            </if>
             <choose>
                 <when test="searchType == 'title'">
                     AND p.title LIKE CONCAT('%', #{keyword}, '%')

@@ -3,7 +3,10 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${post.title}">게시글 상세</title>
+    <title th:text="${post.title} + ' - CodeLog'">게시글 상세</title>
+    <!-- CSRF 토큰 (좋아요 AJAX용) -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link th:href="@{/css/style.css}" rel="stylesheet">
 </head>
@@ -33,32 +36,54 @@
                           th:attr="data-time=${#temporals.format(post.createdAt, 'yyyy-MM-dd''T''HH:mm:ss')}"
                           th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">
                     </span>
-                    <!-- 수정된 경우 표시 -->
-                    <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}"
-                          class="divider"></span>
+                    <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}" class="divider"></span>
                     <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}"
                           style="font-size:0.78rem; color:var(--text-light);">(수정됨)</span>
                 </div>
-                <span class="view-count-badge">
-                    👁 <span th:text="${post.viewCount}"></span>
-                </span>
+                <span class="view-count-badge">👁 <span th:text="${post.viewCount}"></span></span>
             </div>
         </div>
 
         <!-- 게시글 본문 -->
         <div class="card-body">
-            <!-- white-space: pre-wrap으로 줄바꿈 자동 처리 + th:text로 XSS 방어 -->
             <div class="post-content" th:text="${post.content}" style="white-space: pre-wrap;"></div>
+
+            <!-- 태그 목록 -->
+            <div th:if="${not #lists.isEmpty(post.tags)}" class="tag-list mt-4">
+                <a th:each="tag : ${post.tags}"
+                   th:href="@{/board(tag=${tag.name})}"
+                   th:text="'#' + ${tag.name}"
+                   class="tag-pill"></a>
+            </div>
         </div>
 
-        <!-- 수정/삭제 버튼 (작성자만) -->
-        <div class="card-footer d-flex gap-2" th:if="${isAuthor}">
-            <a th:href="@{/board/{id}/edit(id=${post.id})}"
-               class="btn btn-sm btn-outline-secondary">수정</a>
-            <form th:action="@{/board/{id}/delete(id=${post.id})}" method="post"
-                  onsubmit="return confirm('게시글을 삭제하시겠습니까?')">
-                <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
-            </form>
+        <!-- 좋아요 버튼 + 수정/삭제 -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <!-- 좋아요 버튼 -->
+            <button id="likeBtn"
+                    class="like-btn"
+                    th:classappend="${liked} ? 'liked'"
+                    th:attr="data-post-id=${post.id}, data-liked=${liked}"
+                    sec:authorize="isAuthenticated()"
+                    onclick="toggleLike(this)">
+                <span class="heart" th:text="${liked} ? '❤️' : '🤍'"></span>
+                <span id="likeCount" th:text="${likeCount}"></span>
+            </button>
+            <!-- 비로그인 시 좋아요 수만 표시 -->
+            <span sec:authorize="isAnonymous()" class="like-btn" style="cursor:default; pointer-events:none;">
+                🤍 <span th:text="${likeCount}"></span>
+            </span>
+
+            <!-- 수정/삭제 버튼 (작성자만) -->
+            <div class="d-flex gap-2" th:if="${isAuthor}">
+                <a th:href="@{/board/{id}/edit(id=${post.id})}"
+                   class="btn btn-sm btn-outline-secondary">수정</a>
+                <form th:action="@{/board/{id}/delete(id=${post.id})}" method="post"
+                      onsubmit="return confirm('게시글을 삭제하시겠습니까?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                </form>
+            </div>
+            <div th:unless="${isAuthor}"></div>
         </div>
     </div>
 
@@ -73,14 +98,10 @@
 
     <!-- 댓글 목록 -->
     <div class="d-flex flex-column gap-2 mb-3">
-        <!-- 빈 상태 -->
-        <div th:if="${#lists.isEmpty(comments)}"
-             class="empty-state" style="padding: 2rem 1rem;">
+        <div th:if="${#lists.isEmpty(comments)}" class="empty-state" style="padding: 2rem 1rem;">
             <div class="empty-state-icon">💬</div>
             <div class="empty-state-text">첫 댓글을 남겨보세요!</div>
         </div>
-
-        <!-- 댓글 아이템 -->
         <div th:each="comment : ${comments}" class="comment-item">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
@@ -90,7 +111,6 @@
                           th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">
                     </span>
                 </div>
-                <!-- 댓글 삭제 (로그인한 사용자의 username과 댓글 작성자 username 비교) -->
                 <form th:action="@{/comment/{id}/delete(id=${comment.id})}" method="post"
                       th:if="${loginUsername != null and loginUsername == comment.username}"
                       sec:authorize="isAuthenticated()"
@@ -103,12 +123,12 @@
         </div>
     </div>
 
-    <!-- 댓글 작성 입력창 (로그인 시) -->
+    <!-- 댓글 작성 (로그인 시) -->
     <div class="comment-input-area" sec:authorize="isAuthenticated()">
         <form th:action="@{/comment/write}" method="post" class="d-flex gap-2">
             <input type="hidden" name="postId" th:value="${post.id}">
-            <input type="text" name="content" id="commentInput"
-                   class="form-control" placeholder="댓글을 입력하세요" required maxlength="500">
+            <input type="text" name="content" class="form-control"
+                   placeholder="댓글을 입력하세요" required maxlength="500">
             <button type="submit" class="btn btn-dark flex-shrink-0">등록</button>
         </form>
     </div>
@@ -129,14 +149,12 @@ function relativeTime(dateStr) {
     const now = new Date();
     const past = new Date(dateStr);
     const diff = Math.floor((now - past) / 1000);
-
     if (diff < 60)         return '방금 전';
     if (diff < 3600)       return Math.floor(diff / 60) + '분 전';
     if (diff < 86400)      return Math.floor(diff / 3600) + '시간 전';
     if (diff < 86400 * 7)  return Math.floor(diff / 86400) + '일 전';
     return dateStr.substring(0, 10);
 }
-
 document.querySelectorAll('.rel-time').forEach(el => {
     const t = el.getAttribute('data-time');
     if (t) el.textContent = relativeTime(t);
@@ -146,6 +164,28 @@ document.querySelectorAll('.rel-time').forEach(el => {
 document.querySelectorAll('.alert-auto-close').forEach(el => {
     setTimeout(() => el.remove(), 4000);
 });
+
+/* 좋아요 AJAX 토글 */
+async function toggleLike(btn) {
+    const postId = btn.getAttribute('data-post-id');
+    const csrf  = document.querySelector('meta[name="_csrf"]')?.content;
+    const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+
+    try {
+        const res = await fetch('/like/' + postId, {
+            method: 'POST',
+            headers: { [header]: csrf }
+        });
+        const data = await res.json();
+
+        btn.setAttribute('data-liked', data.liked);
+        btn.querySelector('.heart').textContent = data.liked ? '❤️' : '🤍';
+        document.getElementById('likeCount').textContent = data.likeCount;
+        btn.classList.toggle('liked', data.liked);
+    } catch(e) {
+        console.error('좋아요 처리 실패', e);
+    }
+}
 </script>
 </body>
 </html>

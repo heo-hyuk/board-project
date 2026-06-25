@@ -39,6 +39,13 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
+    // 태그 목록 (N:M) - EAGER로 Thymeleaf에서 바로 접근 가능
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "post_tags",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    private List<Tag> tags = new ArrayList<>();
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
@@ -65,6 +72,12 @@ public class Post {
         this.title = title;
         this.content = content;
         this.category = (category != null && !category.isBlank()) ? category : "자유";
+    }
+
+    // 태그 업데이트
+    public void updateTags(List<Tag> newTags) {
+        this.tags.clear();
+        this.tags.addAll(newTags);
     }
 
     // 조회수 증가

@@ -1,28 +1,36 @@
 package com.board.service;
 
 import com.board.domain.Post;
+import com.board.domain.PostLike;
+import com.board.domain.Tag;
 import com.board.domain.User;
 import com.board.dto.PostDto;
 import com.board.dto.PostSearchDto;
 import com.board.mapper.PostMapper;
+import com.board.repository.PostLikeRepository;
 import com.board.repository.PostRepository;
+import com.board.repository.TagRepository;
 import com.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
 
-    private final PostRepository postRepository;   // JPA - CRUD
+    private final PostRepository postRepository;
     private final UserRepository userRepository;
-    private final PostMapper postMapper;            // MyBatis - 검색/페이지네이션
+    private final PostLikeRepository postLikeRepository;
+    private final TagRepository tagRepository;
+    private final PostMapper postMapper;
 
     // 게시글 목록 검색 + 페이지네이션 (MyBatis)
     public Map<String, Object> searchPosts(PostSearchDto searchDto) {
@@ -55,23 +63,26 @@ public class PostService {
 
     // 게시글 작성 (JPA)
     @Transactional
-    public Long write(String title, String content, String category, String username) {
+    public Long write(String title, String content, String category, String tagString, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
         Post post = Post.create(title, content, category, user);
-        return postRepository.save(post).getId();
+        postRepository.save(post);
+        // 태그 저장
+        post.updateTags(parseTags(tagString));
+        return post.getId();
     }
 
     // 게시글 수정 (JPA)
     @Transactional
-    public void update(Long postId, String title, String content, String category, String username) {
+    public void update(Long postId, String title, String content, String category, String tagString, String username) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
-        // 작성자 본인 확인
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
         post.update(title, content, category);
+        post.updateTags(parseTags(tagString));
     }
 
     // 게시글 삭제 (JPA)
@@ -90,5 +101,62 @@ public class PostService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
         return postRepository.findByUserOrderByCreatedAtDesc(user);
+    }
+
+    // ===========================
+    // 좋아요
+    // ===========================
+
+    // 좋아요 토글 - true: 좋아요 / false: 취소
+    @Transactional
+    public boolean toggleLike(Long postId, String username) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        return postLikeRepository.findByPostAndUser(post, user)
+                .map(like -> {
+                    postLikeRepository.delete(like); // 이미 눌렀으면 취소
+                    return false;
+                })
+                .orElseGet(() -> {
+                    postLikeRepository.save(PostLike.create(post, user)); // 없으면 추가
+                    return true;
+                });
+    }
+
+    // 좋아요 수 조회
+    public int getLikeCount(Long postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+        return postLikeRepository.countByPost(post);
+    }
+
+    // 현재 유저가 좋아요 눌렀는지 확인
+    public boolean isLikedByUser(Long postId, String username) {
+        if (username == null) return false;
+        Post post = postRepository.findById(postId).orElse(null);
+        if (post == null) return false;
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) return false;
+        return postLikeRepository.existsByPostAndUser(post, user);
+    }
+
+    // ===========================
+    // 태그 파싱 (내부 메서드)
+    // ===========================
+    private List<Tag> parseTags(String tagString) {
+        if (tagString == null || tagString.isBlank()) return List.of();
+
+        return Arrays.stream(tagString.split(","))
+                .map(String::trim)
+                .map(t -> t.startsWith("#") ? t.substring(1) : t) // # 제거
+                .filter(t -> !t.isEmpty() && t.length() <= 20)
+                .distinct()
+                .limit(5) // 최대 5개
+                .map(name -> tagRepository.findByName(name)
+                        .orElseGet(() -> tagRepository.save(Tag.create(name)))) // 없으면 생성
+                .collect(Collectors.toList());
     }
 }

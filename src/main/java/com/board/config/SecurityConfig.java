@@ -37,9 +37,9 @@ public class SecurityConfig {
                 .requestMatchers("/", "/auth/**", "/css/**", "/js/**").permitAll()
                 .requestMatchers("/board").permitAll()
                 .requestMatchers("/board/{id:[0-9]+}").permitAll()  // 게시글 상세 조회만 허용
-                // 게시글 작성/수정/삭제, 댓글, 마이페이지는 로그인 필요
+                // 게시글 작성/수정/삭제, 댓글, 좋아요, 마이페이지는 로그인 필요
                 .requestMatchers("/board/write", "/board/*/edit", "/board/*/delete").authenticated()
-                .requestMatchers("/comment/**", "/user/**").authenticated()
+                .requestMatchers("/comment/**", "/user/**", "/like/**").authenticated()
                 // 나머지는 로그인 필요
                 .anyRequest().authenticated()
             )

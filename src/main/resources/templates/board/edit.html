@@ -48,6 +48,16 @@
                             <div class="char-counter" id="titleCounter"></div>
                         </div>
 
+                        <!-- 태그 -->
+                        <div class="mb-3">
+                            <label class="form-label" for="tags">태그</label>
+                            <input type="text" id="tags" name="tags"
+                                   class="form-control"
+                                   th:value="${#strings.listJoin(post.tags.![name], ', ')}"
+                                   placeholder="Java, Spring, MySQL (쉼표로 구분, 최대 5개)">
+                            <div class="tag-input-hint">각 태그는 20자 이하, # 없이 입력하세요</div>
+                        </div>
+
                         <!-- 내용 -->
                         <div class="mb-4">
                             <label class="form-label" for="content">내용</label>

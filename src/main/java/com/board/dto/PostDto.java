@@ -18,4 +18,5 @@ public class PostDto {
     private Long userId;
     private int commentCount; // 댓글 수
     private String category;  // 카테고리
+    private int likeCount;    // 좋아요 수
 }
