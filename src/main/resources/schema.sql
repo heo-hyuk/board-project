@@ -1,0 +1,37 @@
+-- 데이터베이스 생성
+CREATE DATABASE IF NOT EXISTS board_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE board_db;
+
+-- 회원 테이블
+CREATE TABLE IF NOT EXISTS users (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username   VARCHAR(50)  NOT NULL UNIQUE COMMENT '로그인 아이디',
+    password   VARCHAR(255) NOT NULL COMMENT '암호화된 비밀번호',
+    email      VARCHAR(100) NOT NULL UNIQUE,
+    nickname   VARCHAR(50)  NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 게시글 테이블
+CREATE TABLE IF NOT EXISTS posts (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title      VARCHAR(200) NOT NULL,
+    content    TEXT         NOT NULL,
+    user_id    BIGINT       NOT NULL,
+    view_count INT          DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- 댓글 테이블
+CREATE TABLE IF NOT EXISTS comments (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    content    VARCHAR(500) NOT NULL,
+    post_id    BIGINT       NOT NULL,
+    user_id    BIGINT       NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);

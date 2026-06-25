@@ -1,0 +1,126 @@
+package com.board.controller;
+
+import com.board.domain.Post;
+import com.board.dto.PostSearchDto;
+import com.board.service.CommentService;
+import com.board.service.PostService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.Map;
+
+@Controller
+@RequestMapping("/board")
+@RequiredArgsConstructor
+public class BoardController {
+
+    private final PostService postService;
+    private final CommentService commentService;
+
+    // 게시글 목록 (검색 + 페이지네이션)
+    @GetMapping
+    public String list(@ModelAttribute PostSearchDto searchDto, Model model) {
+        Map<String, Object> result = postService.searchPosts(searchDto);
+        model.addAttribute("posts", result.get("posts"));
+        model.addAttribute("totalCount", result.get("totalCount"));
+        model.addAttribute("totalPages", result.get("totalPages"));
+        model.addAttribute("currentPage", result.get("currentPage"));
+        model.addAttribute("searchDto", searchDto);
+        return "board/list";
+    }
+
+    // 게시글 상세
+    @GetMapping("/{id}")
+    public String detail(@PathVariable Long id,
+                         @AuthenticationPrincipal UserDetails userDetails,
+                         Model model) {
+        Post post = postService.findById(id);
+        model.addAttribute("post", post);
+        model.addAttribute("comments", commentService.findByPost(id));
+        // 작성자 본인 여부 확인 (수정/삭제 버튼 표시용)
+        if (userDetails != null) {
+            model.addAttribute("isAuthor", post.getUser().getUsername().equals(userDetails.getUsername()));
+            model.addAttribute("loginUsername", userDetails.getUsername());
+        }
+        return "board/detail";
+    }
+
+    // 게시글 작성 페이지
+    @GetMapping("/write")
+    public String writePage() {
+        return "board/write";
+    }
+
+    // 게시글 작성 처리
+    @PostMapping("/write")
+    public String write(@RequestParam String title,
+                        @RequestParam String content,
+                        @AuthenticationPrincipal UserDetails userDetails,
+                        RedirectAttributes redirectAttributes,
+                        Model model) {
+        // 입력값 검증
+        if (title.isBlank() || title.length() > 200) {
+            model.addAttribute("errorMsg", "제목은 1~200자 이내로 입력해주세요.");
+            return "board/write";
+        }
+        if (content.isBlank()) {
+            model.addAttribute("errorMsg", "내용을 입력해주세요.");
+            return "board/write";
+        }
+        Long postId = postService.write(title.trim(), content, userDetails.getUsername());
+        redirectAttributes.addFlashAttribute("successMsg", "게시글이 작성되었습니다.");
+        return "redirect:/board/" + postId;
+    }
+
+    // 게시글 수정 페이지
+    @GetMapping("/{id}/edit")
+    public String editPage(@PathVariable Long id,
+                           @AuthenticationPrincipal UserDetails userDetails,
+                           Model model) {
+        Post post = postService.findByIdReadOnly(id);
+        if (!post.getUser().getUsername().equals(userDetails.getUsername())) {
+            return "redirect:/board/" + id;
+        }
+        model.addAttribute("post", post);
+        return "board/edit";
+    }
+
+    // 게시글 수정 처리
+    @PostMapping("/{id}/edit")
+    public String edit(@PathVariable Long id,
+                       @RequestParam String title,
+                       @RequestParam String content,
+                       @AuthenticationPrincipal UserDetails userDetails,
+                       RedirectAttributes redirectAttributes,
+                       Model model) {
+        // 입력값 검증
+        if (title.isBlank() || title.length() > 200) {
+            model.addAttribute("errorMsg", "제목은 1~200자 이내로 입력해주세요.");
+            model.addAttribute("post", postService.findByIdReadOnly(id));
+            return "board/edit";
+        }
+        if (content.isBlank()) {
+            model.addAttribute("errorMsg", "내용을 입력해주세요.");
+            model.addAttribute("post", postService.findByIdReadOnly(id));
+            return "board/edit";
+        }
+        postService.update(id, title.trim(), content, userDetails.getUsername());
+        redirectAttributes.addFlashAttribute("successMsg", "게시글이 수정되었습니다.");
+        return "redirect:/board/" + id;
+    }
+
+    // 게시글 삭제 처리
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable Long id,
+                         @AuthenticationPrincipal UserDetails userDetails,
+                         RedirectAttributes redirectAttributes) {
+        postService.delete(id, userDetails.getUsername());
+        redirectAttributes.addFlashAttribute("successMsg", "게시글이 삭제되었습니다.");
+        return "redirect:/board";
+    }
+}

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: board-db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: 1234
+      MARIADB_DATABASE: board_db
+      MARIADB_USER: board
+      MARIADB_PASSWORD: board1234
+    ports:
+      - "3306:3306"
+    volumes:
+      - board-db-data:/var/lib/mysql   # 데이터 영속성 유지
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+volumes:
+  board-db-data:

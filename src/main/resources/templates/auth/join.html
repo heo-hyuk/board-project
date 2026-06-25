@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원가입</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{layout/base :: navbar(null)}"></div>
+
+<div class="auth-container py-4">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-sm-9 col-md-6 col-lg-4">
+
+                <!-- 로고 영역 -->
+                <div class="text-center mb-4">
+                    <div class="auth-logo">&#9634;</div>
+                    <h4 class="fw-bold mb-1">회원가입</h4>
+                    <p class="text-muted" style="font-size:0.875rem;">새 계정을 만드세요</p>
+                </div>
+
+                <div class="card auth-card">
+                    <div class="card-body p-4">
+
+                        <!-- 전체 오류 -->
+                        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+                            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}" class="mb-0"></p>
+                        </div>
+
+                        <form th:action="@{/auth/join}" method="post" th:object="${userJoinDto}">
+
+                            <!-- 아이디 -->
+                            <div class="mb-3">
+                                <label class="form-label" for="username">아이디</label>
+                                <input type="text" id="username" th:field="*{username}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('username')} ? 'is-invalid'"
+                                       placeholder="4~20자 영문, 숫자">
+                                <div class="invalid-feedback" th:errors="*{username}"></div>
+                            </div>
+
+                            <!-- 비밀번호 -->
+                            <div class="mb-3">
+                                <label class="form-label" for="password">비밀번호</label>
+                                <input type="password" id="password" th:field="*{password}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
+                                       placeholder="6자 이상">
+                                <div class="invalid-feedback" th:errors="*{password}"></div>
+                            </div>
+
+                            <!-- 이메일 -->
+                            <div class="mb-3">
+                                <label class="form-label" for="email">이메일</label>
+                                <input type="email" id="email" th:field="*{email}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"
+                                       placeholder="example@email.com">
+                                <div class="invalid-feedback" th:errors="*{email}"></div>
+                            </div>
+
+                            <!-- 닉네임 -->
+                            <div class="mb-4">
+                                <label class="form-label" for="nickname">닉네임</label>
+                                <input type="text" id="nickname" th:field="*{nickname}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('nickname')} ? 'is-invalid'"
+                                       placeholder="표시될 이름">
+                                <div class="invalid-feedback" th:errors="*{nickname}"></div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-dark">가입하기</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+                <p class="text-center mt-3" style="font-size:0.875rem; color:var(--text-muted);">
+                    이미 계정이 있으신가요?
+                    <a th:href="@{/auth/login}" style="color:var(--accent); font-weight:600;">로그인</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

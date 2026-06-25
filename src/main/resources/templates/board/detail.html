@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${post.title}">게시글 상세</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+<div th:replace="~{layout/base :: navbar('board')}"></div>
+
+<div class="container mt-4 mb-5">
+
+    <!-- 성공 메시지 (자동 닫힘) -->
+    <div th:if="${successMsg}" class="alert alert-success alert-auto-close" th:text="${successMsg}"></div>
+
+    <!-- 게시글 카드 -->
+    <div class="card mb-3">
+        <!-- 게시글 헤더 -->
+        <div class="card-header">
+            <h5 class="mb-2 fw-bold" style="line-height:1.4;" th:text="${post.title}"></h5>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="post-meta">
+                    <span style="font-weight:600;" th:text="${post.user.nickname}"></span>
+                    <span class="divider"></span>
+                    <span class="rel-time"
+                          th:attr="data-time=${#temporals.format(post.createdAt, 'yyyy-MM-dd''T''HH:mm:ss')}"
+                          th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">
+                    </span>
+                    <!-- 수정된 경우 표시 -->
+                    <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}"
+                          class="divider"></span>
+                    <span th:if="${post.updatedAt != null and post.updatedAt != post.createdAt}"
+                          style="font-size:0.78rem; color:var(--text-light);">(수정됨)</span>
+                </div>
+                <span class="view-count-badge">
+                    👁 <span th:text="${post.viewCount}"></span>
+                </span>
+            </div>
+        </div>
+
+        <!-- 게시글 본문 -->
+        <div class="card-body">
+            <!-- white-space: pre-wrap으로 줄바꿈 자동 처리 + th:text로 XSS 방어 -->
+            <div class="post-content" th:text="${post.content}" style="white-space: pre-wrap;"></div>
+        </div>
+
+        <!-- 수정/삭제 버튼 (작성자만) -->
+        <div class="card-footer d-flex gap-2" th:if="${isAuthor}">
+            <a th:href="@{/board/{id}/edit(id=${post.id})}"
+               class="btn btn-sm btn-outline-secondary">수정</a>
+            <form th:action="@{/board/{id}/delete(id=${post.id})}" method="post"
+                  onsubmit="return confirm('게시글을 삭제하시겠습니까?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 목록으로 -->
+    <a th:href="@{/board}" class="btn btn-outline-secondary btn-sm mb-4">← 목록으로</a>
+
+    <!-- 댓글 섹션 -->
+    <div class="mb-2 d-flex align-items-center gap-2">
+        <span class="comment-section-title">댓글</span>
+        <span class="comment-count-pill" th:text="${#lists.size(comments)}"></span>
+    </div>
+
+    <!-- 댓글 목록 -->
+    <div class="d-flex flex-column gap-2 mb-3">
+        <!-- 빈 상태 -->
+        <div th:if="${#lists.isEmpty(comments)}"
+             class="empty-state" style="padding: 2rem 1rem;">
+            <div class="empty-state-icon">💬</div>
+            <div class="empty-state-text">첫 댓글을 남겨보세요!</div>
+        </div>
+
+        <!-- 댓글 아이템 -->
+        <div th:each="comment : ${comments}" class="comment-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="comment-author" th:text="${comment.nickname}"></span>
+                    <span class="comment-time ms-2"
+                          th:attr="data-time=${#temporals.format(comment.createdAt, 'yyyy-MM-dd''T''HH:mm:ss')}"
+                          th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">
+                    </span>
+                </div>
+                <!-- 댓글 삭제 (로그인한 사용자의 username과 댓글 작성자 username 비교) -->
+                <form th:action="@{/comment/{id}/delete(id=${comment.id})}" method="post"
+                      th:if="${loginUsername != null and loginUsername == comment.username}"
+                      sec:authorize="isAuthenticated()"
+                      onsubmit="return confirm('댓글을 삭제하시겠습니까?')">
+                    <input type="hidden" name="postId" th:value="${post.id}">
+                    <button type="submit" class="comment-delete-btn">삭제</button>
+                </form>
+            </div>
+            <p class="comment-text" th:text="${comment.content}"></p>
+        </div>
+    </div>
+
+    <!-- 댓글 작성 입력창 (로그인 시) -->
+    <div class="comment-input-area" sec:authorize="isAuthenticated()">
+        <form th:action="@{/comment/write}" method="post" class="d-flex gap-2">
+            <input type="hidden" name="postId" th:value="${post.id}">
+            <input type="text" name="content" id="commentInput"
+                   class="form-control" placeholder="댓글을 입력하세요" required maxlength="500">
+            <button type="submit" class="btn btn-dark flex-shrink-0">등록</button>
+        </form>
+    </div>
+
+    <!-- 비로그인 시 댓글 안내 -->
+    <div class="comment-input-area text-center" sec:authorize="isAnonymous()">
+        <span class="text-muted" style="font-size:0.875rem;">
+            <a th:href="@{/auth/login}" style="color:var(--accent); font-weight:600;">로그인</a> 후 댓글을 작성할 수 있습니다.
+        </span>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* 상대 시간 변환 */
+function relativeTime(dateStr) {
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diff = Math.floor((now - past) / 1000);
+
+    if (diff < 60)         return '방금 전';
+    if (diff < 3600)       return Math.floor(diff / 60) + '분 전';
+    if (diff < 86400)      return Math.floor(diff / 3600) + '시간 전';
+    if (diff < 86400 * 7)  return Math.floor(diff / 86400) + '일 전';
+    return dateStr.substring(0, 10);
+}
+
+document.querySelectorAll('.rel-time').forEach(el => {
+    const t = el.getAttribute('data-time');
+    if (t) el.textContent = relativeTime(t);
+});
+
+/* 알림 자동 닫기 */
+document.querySelectorAll('.alert-auto-close').forEach(el => {
+    setTimeout(() => el.remove(), 4000);
+});
+</script>
+</body>
+</html>
