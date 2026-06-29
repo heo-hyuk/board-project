@@ -13,13 +13,13 @@ Java/Spring 기술 스택으로 구현한 포트폴리오 프로젝트입니다.
 |------|------|
 | Language | Java 21 |
 | Framework | Spring Boot 3.2.5 |
-| ORM | JPA / Hibernate (CRUD) + MyBatis (동적 검색 쿼리) |
+| ORM | JPA / Hibernate + MyBatis (하이브리드) |
 | Security | Spring Security 6 (BCrypt, 세션 인증) |
-| View | Thymeleaf |
+| View | Thymeleaf + Bootstrap 5 |
 | DB | MariaDB |
 | Build | Maven |
 | Deploy | AWS Lightsail (Ubuntu) |
-| 기타 | Lombok, Bootstrap 5, EasyMDE, marked.js, highlight.js |
+| 기타 | Lombok, EasyMDE, marked.js, highlight.js, DOMPurify |
 
 <br>
 
@@ -31,38 +31,45 @@ Java/Spring 기술 스택으로 구현한 포트폴리오 프로젝트입니다.
 - 내가 작성한 포스트 목록
 
 ### 포스트
-- **마크다운 에디터** (EasyMDE) — 실시간 미리보기 지원
+- **마크다운 에디터** (EasyMDE) — 실시간 미리보기
 - **마크다운 렌더링** (marked.js + DOMPurify XSS 방지 + highlight.js 코드 하이라이팅)
-- 기술 카테고리 분류 (Java / Spring / Web / DevOps / 알고리즘 / CS지식 / 회고)
+- 기술 카테고리 (Java / Spring / Web / DevOps / 알고리즘 / CS지식 / 회고)
 - 포스트 CRUD — 작성자 본인만 수정·삭제
-- 요약문(summary) — 카드 목록에 표시되는 한 줄 소개
-- 태그 기능 (최대 5개, 클릭 시 필터링)
-- 조회수 자동 증가
-- 좋아요 토글 (AJAX, 비로그인 시 수만 표시)
-
-### 댓글
-- 게시글별 댓글 작성 / 삭제 (작성자 본인만)
+- 요약문(summary) — 카드 목록 한 줄 소개
+- 태그 (최대 5개, 클릭 시 필터링)
+- 조회수 자동 증가 / 좋아요 토글
 
 ### 검색 / 필터링
-- 제목 / 내용 / 제목+내용 통합 검색 (MyBatis 동적 쿼리)
-- 카테고리·태그 필터
-- 페이지네이션 (10개씩)
+- 제목 / 내용 / 통합 검색 (MyBatis 동적 쿼리)
+- 카테고리·태그 필터 + 페이지네이션
 
 <br>
 
 ## 기술적 특징
 
 ### JPA + MyBatis 하이브리드 설계
-단순 CRUD는 JPA, 복잡한 동적 검색 쿼리는 MyBatis로 역할을 분리했습니다.  
-두 기술의 장점을 상황에 맞게 활용하는 설계를 경험할 수 있습니다.
 
-### Spring Security 6 인증/인가
-BCrypt 비밀번호 암호화, 경로별 접근 권한 제어, CSRF 보호를 적용했습니다.  
-`CustomUserDetailsService`로 DB 기반 인증을 구현했습니다.
+| 역할 | 기술 |
+|------|------|
+| 게시글 등록 / 수정 / 삭제 | **MyBatis** (insertPost, updatePost, deletePost) |
+| 게시글 목록 검색 + 페이지네이션 | **MyBatis** (동적 WHERE절, JOIN, 서브쿼리) |
+| 댓글 / 좋아요 / 태그 CRUD | **JPA** (Spring Data Repository) |
+| DDL 관리 (CREATE / ALTER / DROP) | **MyBatis** (PostMapper.xml + DatabaseInitializer) |
+| 데이터사전 조회 | **MyBatis** (INFORMATION_SCHEMA) |
 
-### 마크다운 + XSS 방지
-EasyMDE로 작성된 마크다운을 서버에 그대로 저장하고, 클라이언트에서 marked.js로 렌더링합니다.  
-DOMPurify를 통해 XSS 공격을 방지합니다.
+### DB 스키마 자동 관리 (DatabaseInitializer)
+앱 시작 시 `DatabaseInitializer`가 MyBatis Mapper를 통해 DDL을 실행합니다.
+- `CREATE TABLE post_stats` — 일별 조회 통계 테이블
+- `ALTER TABLE posts ADD COLUMN thumbnail_url` — 컬럼 추가
+- `CREATE INDEX idx_posts_category` — 카테고리 조회 성능 향상
+- `CREATE INDEX idx_posts_created_at` — 최신순 정렬 성능 향상
+- `CREATE OR REPLACE VIEW v_post_summary` — posts + users JOIN 뷰
+
+### Spring Security 6
+BCrypt 비밀번호 암호화, 경로별 접근 권한 제어, CSRF 보호, `CustomUserDetailsService` DB 기반 인증
+
+### 반응형 UI
+Bootstrap 5 기반, 모바일 햄버거 메뉴 드롭다운 (헤더 아래 표시, 좌측 정렬)
 
 <br>
 
@@ -70,15 +77,22 @@ DOMPurify를 통해 XSS 공격을 방지합니다.
 
 ```
 src/main/java/com/board
-├── config/          # SecurityConfig
+├── config/          # SecurityConfig, DatabaseInitializer (DDL 자동 실행)
 ├── controller/      # BoardController, AuthController, CommentController
 │                      LikeController, UserController, HomeController
 ├── domain/          # Post, User, Comment, Tag, PostLike
 ├── dto/             # PostDto, PostSearchDto, CommentDto, UserJoinDto
 ├── exception/       # GlobalExceptionHandler
-├── mapper/          # PostMapper.java + PostMapper.xml (MyBatis)
-├── repository/      # JPA Repository 인터페이스
+├── mapper/          # PostMapper.java + PostMapper.xml (MyBatis CRUD + DDL + 데이터사전)
+├── repository/      # JPA Repository 인터페이스 5개
 └── service/         # PostService, CommentService, UserService
+
+src/main/resources
+├── mapper/          # PostMapper.xml
+├── templates/       # Thymeleaf 템플릿
+├── static/css/      # style.css
+├── schema.sql       # 전체 스키마 문서
+└── application.yml
 ```
 
 <br>
@@ -87,30 +101,30 @@ src/main/java/com/board
 
 ```
 users
- ├── id, username, password, email, nickname, bio
+ ├── id, username(UNIQUE), password, email(UNIQUE), nickname, bio
  └── created_at, updated_at
 
 posts
- ├── id, title, summary, content, category, view_count
- ├── user_id (FK → users)
+ ├── id, title, summary, content, category, view_count, thumbnail_url
+ ├── user_id (FK → users, CASCADE)
  └── created_at, updated_at
 
 comments
  ├── id, content
- ├── post_id (FK → posts), user_id (FK → users)
+ ├── post_id (FK → posts, CASCADE), user_id (FK → users, CASCADE)
  └── created_at
 
-tags
- └── id, name
+tags        — id, name(UNIQUE)
+post_tags   — post_id(FK), tag_id(FK)   [N:M]
+post_likes  — id, post_id(FK), user_id(FK), UNIQUE(post_id,user_id)
+post_stats  — id, post_id(FK), view_date, view_count  [일별 통계]
 
-post_tags
- ├── post_id (FK → posts)
- └── tag_id (FK → tags)
+[인덱스]
+idx_posts_category   ON posts(category)
+idx_posts_created_at ON posts(created_at DESC)
 
-post_likes
- ├── id
- ├── post_id (FK → posts), user_id (FK → users)
- └── created_at
+[뷰]
+v_post_summary — posts + users JOIN (category, view_count, comment_count, like_count 포함)
 ```
 
 <br>
@@ -121,7 +135,7 @@ post_likes
 |--------|------|------|
 | 홈 | `/` | 히어로 섹션 + 최신 포스트 6개 카드 |
 | 포스트 목록 | `/board` | 카테고리 탭 + 카드 그리드 + 검색 |
-| 포스트 상세 | `/board/{id}` | 마크다운 렌더링 + 댓글 |
+| 포스트 상세 | `/board/{id}` | 마크다운 렌더링 + 댓글 + 좋아요 |
 | 글쓰기 | `/board/write` | EasyMDE 마크다운 에디터 |
 | 로그인 | `/auth/login` | — |
 | 회원가입 | `/auth/join` | — |
@@ -146,6 +160,11 @@ mvn spring-boot:run
 ## 배포 (AWS Lightsail)
 
 ```bash
-# deploy.sh 실행 (빌드 → 전송 → 재시작 자동화)
-bash deploy.sh
+# 코드 push 후 서버에서 pull + 빌드 + 재시작
+ssh -i "C:\aws\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@43.201.55.31 \
+  "cd ~/board-project && git pull origin main && mvn clean package -DskipTests -q \
+   && pkill -f 'java -jar'; sleep 2 \
+   && nohup java -jar target/board-project-0.0.1-SNAPSHOT.jar > ~/app/app.log 2>&1 &"
 ```
+
+> 자세한 작업 이력 및 다음 작업 목록은 [NOTES.md](./NOTES.md) 참고
