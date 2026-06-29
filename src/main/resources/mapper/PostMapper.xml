@@ -85,4 +85,183 @@
         </where>
     </select>
 
+    <!-- =====================================================
+         게시글 기본 CRUD (MyBatis)
+         ===================================================== -->
+
+    <!-- 게시글 등록 (useGeneratedKeys: 자동 생성된 PK를 params["id"]에 저장) -->
+    <insert id="insertPost" parameterType="map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO posts (title, summary, content, category, user_id, view_count, created_at, updated_at)
+        VALUES (#{title}, #{summary}, #{content}, #{category}, #{userId}, 0, NOW(), NOW())
+    </insert>
+
+    <!-- 게시글 단건 조회 (JOIN + 서브쿼리: 댓글수/좋아요수 포함) -->
+    <select id="selectPostById" resultType="PostDto">
+        SELECT
+            p.id,
+            p.title,
+            p.summary,
+            p.content,
+            p.view_count,
+            p.created_at,
+            p.category,
+            u.nickname,
+            u.id AS user_id,
+            (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
+            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS like_count
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.id = #{id}
+    </select>
+
+    <!-- 게시글 수정 -->
+    <update id="updatePost" parameterType="map">
+        UPDATE posts
+        SET title      = #{title},
+            summary    = #{summary},
+            content    = #{content},
+            category   = #{category},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 게시글 태그 관계 삭제 (post_tags FK 제약으로 인해 posts 삭제 전 먼저 삭제) -->
+    <delete id="deletePostTags">
+        DELETE FROM post_tags WHERE post_id = #{postId}
+    </delete>
+
+    <!-- 게시글 삭제 -->
+    <delete id="deletePost">
+        DELETE FROM posts WHERE id = #{id}
+    </delete>
+
+    <!-- 조회수 증가 -->
+    <update id="increaseViewCount">
+        UPDATE posts SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- =====================================================
+         DDL 명령문 (테이블/인덱스/뷰 관리)
+         ===================================================== -->
+
+    <!-- [CREATE] 게시글 통계 테이블 생성 -->
+    <update id="createPostStatsTable">
+        CREATE TABLE IF NOT EXISTS post_stats (
+            id         BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '통계 ID',
+            post_id    BIGINT       NOT NULL COMMENT '게시글 ID (FK)',
+            view_date  DATE         NOT NULL COMMENT '조회 날짜',
+            view_count INT          DEFAULT 0 COMMENT '일별 조회수',
+            created_at DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
+            CONSTRAINT fk_post_stats_post FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+            CONSTRAINT uq_post_date UNIQUE (post_id, view_date)
+        ) COMMENT '게시글 일별 조회 통계'
+    </update>
+
+    <!-- [ALTER] posts 테이블에 thumbnail_url 컬럼 추가 -->
+    <update id="alterPostsAddThumbnail">
+        ALTER TABLE posts
+            ADD COLUMN IF NOT EXISTS thumbnail_url VARCHAR(500) NULL COMMENT '썸네일 이미지 URL'
+    </update>
+
+    <!-- [DROP] 게시글 통계 테이블 삭제 -->
+    <update id="dropPostStatsTable">
+        DROP TABLE IF EXISTS post_stats
+    </update>
+
+    <!-- =====================================================
+         인덱스 생성 DDL (조회 성능 향상)
+         ===================================================== -->
+
+    <!-- 카테고리별 조회 성능 향상 인덱스 -->
+    <update id="createIndexPostsCategory">
+        CREATE INDEX IF NOT EXISTS idx_posts_category ON posts (category)
+    </update>
+
+    <!-- 최신순 정렬 성능 향상 인덱스 -->
+    <update id="createIndexPostsCreatedAt">
+        CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at DESC)
+    </update>
+
+    <!-- =====================================================
+         뷰(VIEW) 생성 DDL
+         ===================================================== -->
+
+    <!-- 게시글 요약 뷰: posts + users JOIN (조인 결과를 뷰로 정의) -->
+    <update id="createViewPostSummary">
+        CREATE OR REPLACE VIEW v_post_summary AS
+        SELECT
+            p.id,
+            p.title,
+            p.summary,
+            p.category,
+            p.view_count,
+            p.created_at,
+            u.id       AS user_id,
+            u.nickname AS author_nickname,
+            u.username AS author_username,
+            (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count,
+            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS like_count
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+    </update>
+
+    <!-- =====================================================
+         데이터사전 조회 (INFORMATION_SCHEMA)
+         ===================================================== -->
+
+    <!-- 테이블 목록 조회 (DB 내 모든 테이블) -->
+    <select id="selectTableList" resultType="map">
+        SELECT
+            TABLE_NAME    AS tableName,
+            TABLE_ROWS    AS tableRows,
+            TABLE_COMMENT AS tableComment,
+            CREATE_TIME   AS createTime
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = #{schema}
+          AND TABLE_TYPE = 'BASE TABLE'
+        ORDER BY TABLE_NAME
+    </select>
+
+    <!-- 테이블 컬럼 구조 + 제약조건 조회 (PK, FK, NOT NULL 포함) -->
+    <select id="selectTableColumns" resultType="map">
+        SELECT
+            c.COLUMN_NAME    AS columnName,
+            c.DATA_TYPE      AS dataType,
+            c.CHARACTER_MAXIMUM_LENGTH AS maxLength,
+            c.IS_NULLABLE    AS isNullable,
+            c.COLUMN_KEY     AS columnKey,
+            c.COLUMN_DEFAULT AS columnDefault,
+            c.EXTRA          AS extra,
+            c.COLUMN_COMMENT AS columnComment
+        FROM INFORMATION_SCHEMA.COLUMNS c
+        WHERE c.TABLE_SCHEMA = #{schema}
+          AND c.TABLE_NAME   = #{tableName}
+        ORDER BY c.ORDINAL_POSITION
+    </select>
+
+    <!-- 인덱스 목록 조회 (테이블별 인덱스 현황) -->
+    <select id="selectIndexList" resultType="map">
+        SELECT
+            TABLE_NAME  AS tableName,
+            INDEX_NAME  AS indexName,
+            COLUMN_NAME AS columnName,
+            NON_UNIQUE  AS nonUnique,
+            INDEX_TYPE  AS indexType,
+            SEQ_IN_INDEX AS seqInIndex
+        FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = #{schema}
+        ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX
+    </select>
+
+    <!-- 뷰 목록 조회 -->
+    <select id="selectViewList" resultType="map">
+        SELECT
+            TABLE_NAME      AS viewName,
+            VIEW_DEFINITION AS viewDefinition,
+            IS_UPDATABLE    AS isUpdatable
+        FROM INFORMATION_SCHEMA.VIEWS
+        WHERE TABLE_SCHEMA = #{schema}
+        ORDER BY TABLE_NAME
+    </select>
+
 </mapper>

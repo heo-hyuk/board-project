@@ -66,39 +66,66 @@ public class PostService {
         return postRepository.findTop6ByOrderByCreatedAtDesc();
     }
 
-    // 게시글 작성 (JPA)
+    // 게시글 작성 (MyBatis INSERT + JPA 태그 처리)
     @Transactional
     public Long write(String title, String summary, String content, String category, String tagString, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-        Post post = Post.create(title, summary, content, category, user);
-        postRepository.save(post);
-        // 태그 저장
+
+        // MyBatis로 게시글 INSERT (useGeneratedKeys로 생성된 ID 획득)
+        Map<String, Object> params = new HashMap<>();
+        params.put("title", title);
+        params.put("summary", (summary != null && !summary.isBlank()) ? summary.trim() : null);
+        params.put("content", content);
+        params.put("category", (category != null && !category.isBlank()) ? category : "Java");
+        params.put("userId", user.getId());
+        postMapper.insertPost(params);
+
+        Long postId = (Long) params.get("id"); // 자동 생성된 PK
+
+        // 태그 처리: JPA로 엔티티 로드 후 M2M 관계 설정
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글 저장 실패"));
         post.updateTags(parseTags(tagString));
-        return post.getId();
+        return postId;
     }
 
-    // 게시글 수정 (JPA)
+    // 게시글 수정 (MyBatis UPDATE + JPA 태그 처리)
     @Transactional
     public void update(Long postId, String title, String summary, String content, String category, String tagString, String username) {
+        // 권한 확인: JPA로 엔티티 조회
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
-        post.update(title, summary, content, category);
+
+        // MyBatis로 게시글 주요 필드 UPDATE
+        Map<String, Object> params = new HashMap<>();
+        params.put("id", postId);
+        params.put("title", title);
+        params.put("summary", (summary != null && !summary.isBlank()) ? summary.trim() : null);
+        params.put("content", content);
+        params.put("category", (category != null && !category.isBlank()) ? category : "Java");
+        postMapper.updatePost(params);
+
+        // 태그 처리: JPA로 M2M 관계 업데이트
         post.updateTags(parseTags(tagString));
     }
 
-    // 게시글 삭제 (JPA)
+    // 게시글 삭제 (MyBatis DELETE)
     @Transactional
     public void delete(Long postId, String username) {
+        // 권한 확인: JPA로 엔티티 조회
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("삭제 권한이 없습니다.");
         }
-        postRepository.delete(post);
+
+        // MyBatis로 삭제 (post_tags FK 제약으로 인해 순서 중요)
+        postMapper.deletePostTags(postId);  // 1. post_tags 먼저 삭제
+        postMapper.deletePost(postId);      // 2. posts 삭제
     }
 
     // 내가 작성한 게시글 목록 (JPA)
