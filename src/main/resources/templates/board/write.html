@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>글쓰기 - CodeLog</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
     <link th:href="@{/css/style.css}" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
@@ -11,85 +12,110 @@
 <div th:replace="~{layout/base :: navbar('board')}"></div>
 
 <div class="container mt-4 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
+    <div class="write-container">
 
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <a th:href="@{/board}" class="btn btn-outline-secondary btn-sm">← 목록</a>
-                <h5 class="mb-0 fw-bold">게시글 작성</h5>
-            </div>
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <a th:href="@{/board}" class="btn btn-outline-secondary btn-sm">← 목록</a>
+            <h5 class="mb-0 fw-bold">새 포스트 작성</h5>
+        </div>
 
-            <div class="card">
-                <div class="card-body p-4">
+        <div class="card">
+            <div class="card-body p-4">
 
-                    <div th:if="${errorMsg}" class="alert alert-danger" th:text="${errorMsg}"></div>
+                <div th:if="${errorMsg}" class="alert alert-danger" th:text="${errorMsg}"></div>
 
-                    <form th:action="@{/board/write}" method="post">
+                <form th:action="@{/board/write}" method="post" id="writeForm">
 
-                        <!-- 카테고리 선택 -->
-                        <div class="mb-3">
+                    <!-- 카테고리 + 태그 (한 줄) -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-5">
                             <label class="form-label">카테고리</label>
                             <select name="category" class="form-select">
-                                <option value="자유">💬 자유</option>
-                                <option value="질문">❓ 질문</option>
-                                <option value="프로젝트">💡 프로젝트</option>
-                                <option value="취업/커리어">🔥 취업/커리어</option>
-                                <option value="공지">📢 공지</option>
+                                <option value="Java">Java</option>
+                                <option value="Spring">Spring</option>
+                                <option value="Web">Web</option>
+                                <option value="DevOps">DevOps</option>
+                                <option value="알고리즘">알고리즘</option>
+                                <option value="CS지식">CS지식</option>
+                                <option value="회고">회고</option>
                             </select>
                         </div>
-
-                        <!-- 제목 -->
-                        <div class="mb-3">
-                            <label class="form-label" for="title">제목</label>
-                            <input type="text" id="title" name="title"
-                                   class="form-control" placeholder="제목을 입력하세요"
-                                   required maxlength="200" oninput="updateTitleCounter(this)">
-                            <div class="char-counter" id="titleCounter">0 / 200</div>
-                        </div>
-
-                        <!-- 태그 -->
-                        <div class="mb-3">
+                        <div class="col-sm-7">
                             <label class="form-label" for="tags">태그</label>
                             <input type="text" id="tags" name="tags"
                                    class="form-control"
-                                   placeholder="Java, Spring, MySQL (쉼표로 구분, 최대 5개)">
-                            <div class="tag-input-hint">각 태그는 20자 이하, # 없이 입력하세요</div>
+                                   placeholder="Java, Spring, JPA (쉼표로 구분, 최대 5개)">
+                            <div class="tag-input-hint">각 태그는 20자 이하, # 없이 입력</div>
                         </div>
+                    </div>
 
-                        <!-- 내용 -->
-                        <div class="mb-4">
-                            <label class="form-label" for="content">내용</label>
-                            <textarea id="content" name="content"
-                                      class="form-control" rows="14"
-                                      placeholder="내용을 입력하세요"
-                                      required oninput="updateContentCounter(this)"></textarea>
-                            <div class="char-counter" id="contentCounter">0 자</div>
-                        </div>
+                    <!-- 제목 -->
+                    <div class="mb-3">
+                        <label class="form-label" for="title">제목 <span style="color:var(--danger)">*</span></label>
+                        <input type="text" id="title" name="title"
+                               class="form-control" placeholder="포스트 제목을 입력하세요"
+                               required maxlength="200" oninput="updateTitleCounter(this)">
+                        <div class="char-counter" id="titleCounter">0 / 200</div>
+                    </div>
 
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-dark">작성하기</button>
-                            <a th:href="@{/board}" class="btn btn-outline-secondary">취소</a>
-                        </div>
-                    </form>
+                    <!-- 요약 -->
+                    <div class="mb-3">
+                        <label class="form-label" for="summary">요약 <span style="color:var(--text-light); font-weight:400;">(선택)</span></label>
+                        <input type="text" id="summary" name="summary"
+                               class="form-control" placeholder="포스트를 한 줄로 소개해보세요 (목록 카드에 표시됩니다)"
+                               maxlength="200">
+                        <div class="tag-input-hint">입력하지 않으면 본문 앞부분이 자동으로 표시됩니다</div>
+                    </div>
 
-                </div>
+                    <!-- 마크다운 에디터 -->
+                    <div class="mb-4">
+                        <label class="form-label">내용 <span style="color:var(--danger)">*</span></label>
+                        <textarea id="content" name="content" required></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-dark">발행하기</button>
+                        <a th:href="@{/board}" class="btn btn-outline-secondary">취소</a>
+                    </div>
+                </form>
+
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
 <script>
+/* 마크다운 에디터 초기화 */
+const easyMDE = new EasyMDE({
+    element: document.getElementById('content'),
+    placeholder: '마크다운으로 내용을 작성하세요...\n\n## 제목\n\n본문 내용\n\n```java\n// 코드 블록\n```',
+    spellChecker: false,
+    autofocus: false,
+    minHeight: '400px',
+    toolbar: [
+        'bold', 'italic', 'heading', '|',
+        'quote', 'unordered-list', 'ordered-list', '|',
+        'link', 'code', '|',
+        'preview', 'side-by-side', 'fullscreen', '|',
+        'guide'
+    ],
+    status: ['lines', 'words', 'cursor'],
+    previewRender(plainText) {
+        return marked.parse(plainText);
+    }
+});
+
+/* 제목 글자 수 카운터 */
 function updateTitleCounter(el) {
     const counter = document.getElementById('titleCounter');
     const len = el.value.length;
     counter.textContent = len + ' / 200';
     counter.className = 'char-counter' + (len >= 190 ? ' danger' : len >= 170 ? ' warning' : '');
 }
-function updateContentCounter(el) {
-    const counter = document.getElementById('contentCounter');
-    counter.textContent = el.value.length.toLocaleString() + ' 자';
-}
 </script>
+<!-- marked.js (미리보기용) -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </body>
 </html>

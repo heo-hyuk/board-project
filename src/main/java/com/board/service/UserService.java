@@ -54,4 +54,11 @@ public class UserService {
         }
         user.updatePassword(passwordEncoder.encode(newPassword));
     }
+
+    // 자기소개 변경
+    @Transactional
+    public void updateBio(String username, String bio) {
+        User user = findByUsername(username);
+        user.updateBio(bio);
+    }
 }

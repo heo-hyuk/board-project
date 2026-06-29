@@ -50,4 +50,14 @@ public class UserController {
         }
         return "redirect:/user/mypage";
     }
+
+    // 자기소개 변경
+    @PostMapping("/bio")
+    public String updateBio(@RequestParam String bio,
+                            @AuthenticationPrincipal UserDetails userDetails,
+                            RedirectAttributes redirectAttributes) {
+        userService.updateBio(userDetails.getUsername(), bio);
+        redirectAttributes.addFlashAttribute("successMsg", "소개가 변경되었습니다.");
+        return "redirect:/user/mypage";
+    }
 }

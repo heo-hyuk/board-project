@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>마이페이지</title>
+    <title>마이페이지 - CodeLog</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link th:href="@{/css/style.css}" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -12,38 +12,59 @@
 
 <div class="container mt-4 mb-5">
 
-    <!-- 알림 메시지 (자동 닫힘) -->
+    <!-- 알림 메시지 -->
     <div th:if="${successMsg}" class="alert alert-success alert-auto-close" th:text="${successMsg}"></div>
     <div th:if="${errorMsg}"   class="alert alert-danger"                   th:text="${errorMsg}"></div>
 
+    <!-- 프로필 헤더 카드 -->
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-4 flex-wrap">
+                <!-- 아바타 -->
+                <div class="user-avatar flex-shrink-0" id="userAvatar"></div>
+                <!-- 정보 -->
+                <div class="flex-grow-1">
+                    <h5 class="fw-bold mb-1" th:text="${user.nickname}"></h5>
+                    <p class="text-muted mb-1" style="font-size:0.85rem;" th:text="'@' + ${user.username}"></p>
+                    <p class="text-muted mb-2" style="font-size:0.875rem;"
+                       th:text="${user.bio != null and !user.bio.isEmpty() ? user.bio : '아직 소개글이 없습니다.'}"></p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <div>
+                            <span style="font-weight:700; color:var(--accent);" th:text="${#lists.size(myPosts)}"></span>
+                            <span class="text-muted" style="font-size:0.82rem;"> 포스트</span>
+                        </div>
+                        <div>
+                            <span class="text-muted" style="font-size:0.82rem;">가입일 </span>
+                            <span style="font-size:0.82rem;" th:text="${#temporals.format(user.createdAt, 'yyyy.MM.dd')}"></span>
+                        </div>
+                        <div>
+                            <span class="text-muted" style="font-size:0.82rem;">이메일 </span>
+                            <span style="font-size:0.82rem;" th:text="${user.email}"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-4">
 
-        <!-- 왼쪽: 프로필 + 설정 -->
-        <div class="col-md-5 col-lg-4">
+        <!-- 왼쪽: 설정 -->
+        <div class="col-md-4">
 
-            <!-- 프로필 카드 -->
+            <!-- 소개 변경 -->
             <div class="card mb-3">
-                <div class="card-body text-center py-4">
-                    <!-- 이니셜 아바타 -->
-                    <div class="user-avatar" id="userAvatar"></div>
-                    <h6 class="fw-bold mb-0" th:text="${user.nickname}"></h6>
-                    <p class="text-muted" style="font-size:0.8rem;" th:text="'@' + ${user.username}"></p>
-                </div>
-                <div class="card-footer p-0">
-                    <div class="info-row px-3">
-                        <span class="info-label">이메일</span>
-                        <span class="info-value" th:text="${user.email}"></span>
-                    </div>
-                    <div class="info-row px-3">
-                        <span class="info-label">가입일</span>
-                        <span class="info-value"
-                              th:text="${#temporals.format(user.createdAt, 'yyyy.MM.dd')}"></span>
-                    </div>
-                    <div class="info-row px-3">
-                        <span class="info-label">작성 글</span>
-                        <span class="info-value" style="color:var(--accent);"
-                              th:text="${#lists.size(myPosts)} + '개'"></span>
-                    </div>
+                <div class="card-header">소개 변경</div>
+                <div class="card-body">
+                    <form th:action="@{/user/bio}" method="post">
+                        <div class="mb-2">
+                            <textarea name="bio" class="form-control" rows="3"
+                                      placeholder="개발자로서 나를 소개해보세요"
+                                      maxlength="200"
+                                      th:text="${user.bio}"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-dark w-100 btn-sm">소개 저장</button>
+                    </form>
                 </div>
             </div>
 
@@ -83,11 +104,11 @@
 
         </div>
 
-        <!-- 오른쪽: 내가 작성한 게시글 -->
-        <div class="col-md-7 col-lg-8">
+        <!-- 오른쪽: 내 포스트 목록 -->
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header d-flex align-items-center gap-2">
-                    내가 작성한 게시글
+                    내가 작성한 포스트
                     <span class="comment-count-pill" th:text="${#lists.size(myPosts)}"></span>
                 </div>
                 <div class="card-body p-0">
@@ -95,21 +116,31 @@
                     <!-- 빈 상태 -->
                     <div th:if="${#lists.isEmpty(myPosts)}" class="empty-state">
                         <div class="empty-state-icon">📝</div>
-                        <div class="empty-state-text">아직 작성한 게시글이 없습니다.</div>
+                        <div class="empty-state-text">아직 작성한 포스트가 없습니다.</div>
+                        <a th:href="@{/board/write}" class="btn btn-dark btn-sm mt-3">첫 포스트 작성하기</a>
                     </div>
 
-                    <!-- 게시글 목록 -->
+                    <!-- 포스트 목록 -->
                     <ul class="list-group list-group-flush" th:unless="${#lists.isEmpty(myPosts)}">
-                        <li class="list-group-item d-flex justify-content-between align-items-center"
+                        <li class="list-group-item"
                             th:each="post : ${myPosts}"
-                            style="padding: 0.75rem 1.25rem; transition: background 0.15s;">
-                            <a th:href="@{/board/{id}(id=${post.id})}"
-                               th:text="${post.title}"
-                               class="post-title-link text-truncate"
-                               style="max-width: 70%;"></a>
-                            <span class="text-muted"
-                                  style="font-size:0.8rem; flex-shrink:0;"
-                                  th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd')}"></span>
+                            style="padding: 0.85rem 1.25rem; transition: background 0.15s; border-color: var(--border-light);">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="flex-grow-1">
+                                    <span class="category-badge me-2"
+                                          th:classappend="'cat-' + ${post.category}"
+                                          th:text="${post.category}"
+                                          style="font-size:0.68rem;"></span>
+                                    <a th:href="@{/board/{id}(id=${post.id})}"
+                                       th:text="${post.title}"
+                                       class="fw-600"
+                                       style="color:var(--text); font-weight:600; font-size:0.9rem; text-decoration:none;">
+                                    </a>
+                                </div>
+                                <span class="text-muted flex-shrink-0"
+                                      style="font-size:0.78rem;"
+                                      th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd')}"></span>
+                            </div>
                         </li>
                     </ul>
 
@@ -126,8 +157,7 @@
 (function() {
     const el = document.getElementById('userAvatar');
     if (!el) return;
-    // 닉네임 첫 글자를 아바타에 표시
-    const nickname = document.querySelector('.user-avatar + h6');
+    const nickname = document.querySelector('h5.fw-bold');
     if (nickname) {
         el.textContent = nickname.textContent.trim().charAt(0).toUpperCase();
     }

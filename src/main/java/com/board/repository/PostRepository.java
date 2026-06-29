@@ -10,4 +10,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     // 내가 작성한 게시글 목록 (마이페이지용)
     List<Post> findByUserOrderByCreatedAtDesc(User user);
+
+    // 홈 화면 최신 포스트 6개
+    List<Post> findTop6ByOrderByCreatedAtDesc();
 }

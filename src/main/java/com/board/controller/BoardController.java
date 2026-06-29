@@ -22,7 +22,7 @@ public class BoardController {
     private final PostService postService;
     private final CommentService commentService;
 
-    // 게시글 목록 (검색 + 페이지네이션)
+    // 포스트 목록 (검색 + 페이지네이션)
     @GetMapping
     public String list(@ModelAttribute PostSearchDto searchDto, Model model) {
         Map<String, Object> result = postService.searchPosts(searchDto);
@@ -34,7 +34,7 @@ public class BoardController {
         return "board/list";
     }
 
-    // 게시글 상세
+    // 포스트 상세
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id,
                          @AuthenticationPrincipal UserDetails userDetails,
@@ -55,17 +55,18 @@ public class BoardController {
         return "board/detail";
     }
 
-    // 게시글 작성 페이지
+    // 포스트 작성 페이지
     @GetMapping("/write")
     public String writePage() {
         return "board/write";
     }
 
-    // 게시글 작성 처리
+    // 포스트 작성 처리
     @PostMapping("/write")
     public String write(@RequestParam String title,
+                        @RequestParam(required = false) String summary,
                         @RequestParam String content,
-                        @RequestParam(defaultValue = "자유") String category,
+                        @RequestParam(defaultValue = "Java") String category,
                         @RequestParam(required = false) String tags,
                         @AuthenticationPrincipal UserDetails userDetails,
                         RedirectAttributes redirectAttributes,
@@ -78,12 +79,12 @@ public class BoardController {
             model.addAttribute("errorMsg", "내용을 입력해주세요.");
             return "board/write";
         }
-        Long postId = postService.write(title.trim(), content, category, tags, userDetails.getUsername());
-        redirectAttributes.addFlashAttribute("successMsg", "게시글이 작성되었습니다.");
+        Long postId = postService.write(title.trim(), summary, content, category, tags, userDetails.getUsername());
+        redirectAttributes.addFlashAttribute("successMsg", "포스트가 작성되었습니다.");
         return "redirect:/board/" + postId;
     }
 
-    // 게시글 수정 페이지
+    // 포스트 수정 페이지
     @GetMapping("/{id}/edit")
     public String editPage(@PathVariable Long id,
                            @AuthenticationPrincipal UserDetails userDetails,
@@ -96,12 +97,13 @@ public class BoardController {
         return "board/edit";
     }
 
-    // 게시글 수정 처리
+    // 포스트 수정 처리
     @PostMapping("/{id}/edit")
     public String edit(@PathVariable Long id,
                        @RequestParam String title,
+                       @RequestParam(required = false) String summary,
                        @RequestParam String content,
-                       @RequestParam(defaultValue = "자유") String category,
+                       @RequestParam(defaultValue = "Java") String category,
                        @RequestParam(required = false) String tags,
                        @AuthenticationPrincipal UserDetails userDetails,
                        RedirectAttributes redirectAttributes,
@@ -116,18 +118,18 @@ public class BoardController {
             model.addAttribute("post", postService.findByIdReadOnly(id));
             return "board/edit";
         }
-        postService.update(id, title.trim(), content, category, tags, userDetails.getUsername());
-        redirectAttributes.addFlashAttribute("successMsg", "게시글이 수정되었습니다.");
+        postService.update(id, title.trim(), summary, content, category, tags, userDetails.getUsername());
+        redirectAttributes.addFlashAttribute("successMsg", "포스트가 수정되었습니다.");
         return "redirect:/board/" + id;
     }
 
-    // 게시글 삭제 처리
+    // 포스트 삭제 처리
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id,
                          @AuthenticationPrincipal UserDetails userDetails,
                          RedirectAttributes redirectAttributes) {
         postService.delete(id, userDetails.getUsername());
-        redirectAttributes.addFlashAttribute("successMsg", "게시글이 삭제되었습니다.");
+        redirectAttributes.addFlashAttribute("successMsg", "포스트가 삭제되었습니다.");
         return "redirect:/board";
     }
 }

@@ -19,11 +19,14 @@ public class Post {
     @Column(nullable = false, length = 200)
     private String title;
 
+    @Column(length = 300)
+    private String summary; // 요약문 (카드 목록에 표시, 선택사항)
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(nullable = false, length = 20)
-    private String category = "자유"; // 공지 / 자유 / 질문 / 프로젝트 / 취업/커리어
+    private String category = "Java"; // Java / Spring / Web / DevOps / 알고리즘 / CS지식 / 회고
 
     // 작성자 (N:1)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,20 +61,22 @@ public class Post {
     }
 
     // 생성 메서드
-    public static Post create(String title, String content, String category, User user) {
+    public static Post create(String title, String summary, String content, String category, User user) {
         Post post = new Post();
         post.title = title;
+        post.summary = (summary != null && !summary.isBlank()) ? summary.trim() : null;
         post.content = content;
-        post.category = (category != null && !category.isBlank()) ? category : "자유";
+        post.category = (category != null && !category.isBlank()) ? category : "Java";
         post.user = user;
         return post;
     }
 
     // 게시글 수정
-    public void update(String title, String content, String category) {
+    public void update(String title, String summary, String content, String category) {
         this.title = title;
+        this.summary = (summary != null && !summary.isBlank()) ? summary.trim() : null;
         this.content = content;
-        this.category = (category != null && !category.isBlank()) ? category : "자유";
+        this.category = (category != null && !category.isBlank()) ? category : "Java";
     }
 
     // 태그 업데이트

@@ -28,6 +28,9 @@ public class User {
     @Column(nullable = false, length = 50)
     private String nickname;
 
+    @Column(length = 200)
+    private String bio; // 자기소개 (선택사항)
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -64,5 +67,10 @@ public class User {
     // 비밀번호 수정
     public void updatePassword(String password) {
         this.password = password;
+    }
+
+    // 자기소개 수정
+    public void updateBio(String bio) {
+        this.bio = (bio != null && !bio.isBlank()) ? bio.trim() : null;
     }
 }

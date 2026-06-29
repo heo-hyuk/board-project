@@ -9,6 +9,7 @@
         SELECT
             p.id,
             p.title,
+            p.summary,
             p.content,
             p.view_count,
             p.created_at,

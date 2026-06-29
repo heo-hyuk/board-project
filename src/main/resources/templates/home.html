@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>CodeLog - 기술 블로그</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+<div th:replace="~{layout/base :: navbar('home')}"></div>
+
+<!-- 히어로 섹션 -->
+<section class="blog-hero">
+    <div class="container position-relative" style="z-index:1;">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1>개발 지식을<br><span>기록</span>하고 공유하세요</h1>
+                <p>Java · Spring · Web · DevOps · 알고리즘<br>기술 성장의 모든 순간을 CodeLog에 담아보세요.</p>
+                <div class="hero-buttons">
+                    <a th:href="@{/board/write}" sec:authorize="isAuthenticated()" class="btn-hero-primary">
+                        ✏️ 글 작성하기
+                    </a>
+                    <a th:href="@{/auth/join}" sec:authorize="isAnonymous()" class="btn-hero-primary">
+                        🚀 지금 시작하기
+                    </a>
+                    <a th:href="@{/board}" class="btn-hero-outline">
+                        📚 포스트 보기
+                    </a>
+                </div>
+                <div class="hero-stats" th:if="${not #lists.isEmpty(recentPosts)}">
+                    <div>
+                        <span class="hero-stat-num" th:text="${#lists.size(recentPosts)}+">0+</span>
+                        <span class="hero-stat-label">최근 포스트</span>
+                    </div>
+                    <div>
+                        <span class="hero-stat-num">Java</span>
+                        <span class="hero-stat-label">주요 기술</span>
+                    </div>
+                    <div>
+                        <span class="hero-stat-num">Spring</span>
+                        <span class="hero-stat-label">프레임워크</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container mb-5">
+
+    <!-- 최신 포스트 -->
+    <div class="mb-5" th:if="${not #lists.isEmpty(recentPosts)}">
+        <div class="section-title">최신 포스트</div>
+        <div class="row g-3">
+            <div class="col-md-6 col-lg-4" th:each="post : ${recentPosts}">
+                <a th:href="@{/board/{id}(id=${post.id})}" class="post-card text-decoration-none d-block h-100">
+                    <!-- 카테고리 뱃지 -->
+                    <div class="post-card-category">
+                        <span class="category-badge"
+                              th:classappend="'cat-' + ${post.category}"
+                              th:text="${post.category}"></span>
+                    </div>
+                    <!-- 제목 -->
+                    <div class="post-card-title" th:text="${post.title}"></div>
+                    <!-- 요약 -->
+                    <div class="post-card-excerpt"
+                         th:text="${post.summary != null and !post.summary.isEmpty() ? post.summary : #strings.abbreviate(post.content, 130)}">
+                    </div>
+                    <!-- 태그 -->
+                    <div class="post-card-tags" th:if="${not #lists.isEmpty(post.tags)}">
+                        <span th:each="tag : ${post.tags}"
+                              th:text="'#' + ${tag.name}"
+                              class="tag-pill" style="font-size:0.72rem; padding:2px 9px;"></span>
+                    </div>
+                    <!-- 푸터 -->
+                    <div class="post-card-footer">
+                        <div class="post-card-author">
+                            <div class="author-avatar-sm" th:text="${post.user.nickname.charAt(0).toString().toUpperCase()}">A</div>
+                            <span th:text="${post.user.nickname}"></span>
+                            <span class="text-muted">·</span>
+                            <span class="rel-time"
+                                  th:attr="data-time=${#temporals.format(post.createdAt, 'yyyy-MM-dd''T''HH:mm:ss')}"
+                                  th:text="${#temporals.format(post.createdAt, 'yyyy.MM.dd')}"></span>
+                        </div>
+                        <div class="post-card-stats">
+                            <span class="post-card-stat">👁 <span th:text="${post.viewCount}"></span></span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="text-center mt-4">
+            <a th:href="@{/board}" class="btn btn-outline-secondary px-4">
+                전체 포스트 보기 →
+            </a>
+        </div>
+    </div>
+
+    <!-- 포스트 없을 때 -->
+    <div th:if="${#lists.isEmpty(recentPosts)}" class="empty-state" style="padding: 5rem 1rem;">
+        <div class="empty-state-icon">📝</div>
+        <div class="empty-state-text mb-3">아직 작성된 포스트가 없습니다.</div>
+        <a th:href="@{/board/write}" sec:authorize="isAuthenticated()" class="btn btn-dark">
+            첫 포스트 작성하기
+        </a>
+        <a th:href="@{/auth/join}" sec:authorize="isAnonymous()" class="btn btn-dark">
+            회원가입 후 시작하기
+        </a>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* 상대 시간 변환 */
+function relativeTime(dateStr) {
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diff = Math.floor((now - past) / 1000);
+    if (diff < 60)         return '방금 전';
+    if (diff < 3600)       return Math.floor(diff / 60) + '분 전';
+    if (diff < 86400)      return Math.floor(diff / 3600) + '시간 전';
+    if (diff < 86400 * 7)  return Math.floor(diff / 86400) + '일 전';
+    return dateStr.substring(0, 10);
+}
+document.querySelectorAll('.rel-time').forEach(el => {
+    const t = el.getAttribute('data-time');
+    if (t) el.textContent = relativeTime(t);
+});
+</script>
+</body>
+</html>

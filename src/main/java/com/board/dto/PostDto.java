@@ -11,6 +11,7 @@ public class PostDto {
 
     private Long id;
     private String title;
+    private String summary;    // 요약문 (없으면 content 앞부분 표시)
     private String content;
     private int viewCount;
     private LocalDateTime createdAt;

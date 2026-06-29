@@ -61,12 +61,17 @@ public class PostService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
     }
 
+    // 홈 화면 최신 포스트 6개 (JPA)
+    public List<Post> getRecentPosts() {
+        return postRepository.findTop6ByOrderByCreatedAtDesc();
+    }
+
     // 게시글 작성 (JPA)
     @Transactional
-    public Long write(String title, String content, String category, String tagString, String username) {
+    public Long write(String title, String summary, String content, String category, String tagString, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
-        Post post = Post.create(title, content, category, user);
+        Post post = Post.create(title, summary, content, category, user);
         postRepository.save(post);
         // 태그 저장
         post.updateTags(parseTags(tagString));
@@ -75,13 +80,13 @@ public class PostService {
 
     // 게시글 수정 (JPA)
     @Transactional
-    public void update(Long postId, String title, String content, String category, String tagString, String username) {
+    public void update(Long postId, String title, String summary, String content, String category, String tagString, String username) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
-        post.update(title, content, category);
+        post.update(title, summary, content, category);
         post.updateTags(parseTags(tagString));
     }
 
