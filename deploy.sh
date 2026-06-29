@@ -2,9 +2,9 @@
 # =============================
 # AWS Lightsail 배포 스크립트
 # =============================
-LIGHTSAIL_IP="여기에_서버_IP"         # 예: 13.125.xxx.xxx
+LIGHTSAIL_IP="43.201.55.31"
 LIGHTSAIL_USER="ubuntu"
-KEY_PATH="여기에_PEM_키_경로"          # 예: ~/.ssh/lightsail-key.pem  또는  C:/Users/SBS/.ssh/lightsail-key.pem
+KEY_PATH="C:/aws/LightsailDefaultKey-ap-northeast-2.pem"
 JAR_NAME="board-0.0.1-SNAPSHOT.jar"
 REMOTE_DIR="/home/ubuntu/app"
 
