@@ -1061,16 +1061,176 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ===========================
-   반응형
+   데스크탑 전용 네비 스타일
+   =========================== */
+.navbar-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* 글쓰기 버튼 (데스크탑) */
+.nav-write-btn {
+    background: rgba(255,255,255,.15) !important;
+    color: #fff !important;
+    border-radius: var(--radius-pill) !important;
+    padding: 0.35rem 1rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+}
+
+.nav-write-btn:hover {
+    background: rgba(255,255,255,.28) !important;
+}
+
+/* 회원가입 버튼 (데스크탑) */
+.nav-join-btn {
+    border: 1.5px solid rgba(255,255,255,.4) !important;
+    border-radius: var(--radius-pill) !important;
+    padding: 0.35rem 0.9rem !important;
+    font-size: 0.875rem !important;
+}
+
+.nav-join-btn:hover {
+    border-color: rgba(255,255,255,.8) !important;
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+}
+
+/* ===========================
+   반응형 - 모바일 (lg 미만)
+   =========================== */
+@media (max-width: 991.98px) {
+
+    /* ── 네비게이션 모바일 드롭다운 ── */
+    .navbar {
+        position: relative;
+    }
+
+    /* 햄버거 메뉴가 열릴 때: 브랜드/토글 아래로 드롭다운 */
+    .navbar-collapse {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--primary);
+        border-top: 1px solid rgba(255,255,255,.12);
+        border-bottom: 3px solid var(--accent);
+        padding: 0.4rem 0 0.75rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,.25);
+        z-index: 1050;
+        border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    }
+
+    /* 왼쪽 메뉴 영역 */
+    .navbar-collapse .navbar-nav {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100%;
+        gap: 0;
+    }
+
+    /* 모든 nav-item을 풀 너비로 */
+    .navbar-collapse .nav-item {
+        width: 100%;
+    }
+
+    /* nav-link 왼쪽 정렬 */
+    .navbar-collapse .nav-link {
+        padding: 0.7rem 1.25rem !important;
+        border-radius: 0 !important;
+        font-size: 0.92rem !important;
+        color: rgba(255,255,255,.85) !important;
+        border-bottom: 1px solid rgba(255,255,255,.05);
+        width: 100%;
+        display: block;
+    }
+
+    .navbar-collapse .nav-link:hover,
+    .navbar-collapse .nav-link.active {
+        background: rgba(255,255,255,.1) !important;
+        color: #fff !important;
+    }
+
+    /* 글쓰기 버튼: 모바일에서 일반 링크 스타일 */
+    .navbar-collapse .nav-write-btn {
+        background: rgba(255,255,255,.08) !important;
+        border-radius: 0 !important;
+        color: rgba(255,255,255,.85) !important;
+        font-size: 0.92rem !important;
+        padding: 0.7rem 1.25rem !important;
+    }
+
+    .navbar-collapse .nav-write-btn:hover {
+        background: rgba(255,255,255,.15) !important;
+        color: #fff !important;
+    }
+
+    /* 회원가입 버튼: 모바일에서 일반 링크 스타일 */
+    .navbar-collapse .nav-join-btn {
+        border: none !important;
+        border-radius: 0 !important;
+        background: none !important;
+        padding: 0.7rem 1.25rem !important;
+        font-size: 0.92rem !important;
+        color: rgba(255,255,255,.85) !important;
+    }
+
+    .navbar-collapse .nav-join-btn:hover {
+        background: rgba(255,255,255,.1) !important;
+        color: #fff !important;
+        border: none !important;
+    }
+
+    /* 오른쪽 nav 그룹: 위 구분선 */
+    .navbar-collapse .navbar-nav-right {
+        border-top: 1px solid rgba(255,255,255,.15);
+        margin-top: 0.35rem;
+        padding-top: 0.35rem;
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    /* 로그아웃 버튼: 모바일에서 풀너비 왼쪽 정렬 */
+    .navbar-collapse .nav-btn-logout {
+        width: 100%;
+        text-align: left;
+        padding: 0.7rem 1.25rem;
+        border: none;
+        border-radius: 0;
+        font-size: 0.92rem;
+        background: none;
+        color: rgba(255,255,255,.7);
+        cursor: pointer;
+        transition: all var(--transition);
+        display: block;
+    }
+
+    .navbar-collapse .nav-btn-logout:hover {
+        background: rgba(255,255,255,.08);
+        color: rgba(255,255,255,.95);
+    }
+
+    /* 로그아웃 form 영역 */
+    .navbar-collapse .nav-item form {
+        width: 100%;
+    }
+}
+
+/* ===========================
+   반응형 - 소형 모바일 (768px 미만)
    =========================== */
 @media (max-width: 768px) {
     .container { padding: 0 1rem; }
     .blog-hero { padding: 3rem 0 2.5rem; }
     .blog-hero h1 { font-size: 1.8rem; }
+    .blog-hero p { font-size: 0.95rem; }
+    .hero-stats { gap: 1.25rem; }
     .card-body { padding: 1rem; }
     .article-title { font-size: 1.4rem; }
     .markdown-body h1 { font-size: 1.35rem; }
     .markdown-body h2 { font-size: 1.15rem; }
+    .post-card { padding: 1.15rem; }
 }
 
 /* ===========================

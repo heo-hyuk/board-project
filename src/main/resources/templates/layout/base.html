@@ -22,12 +22,14 @@
         <!-- 모바일 토글 버튼 -->
         <button class="navbar-toggler border-0" type="button"
                 data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="메뉴 열기"
                 style="filter: invert(1);">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto ms-3">
+            <!-- 왼쪽 메뉴 -->
+            <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/board}"
                        th:classappend="${currentPage == 'board'} ? 'active'">포스트</a>
@@ -35,12 +37,9 @@
             </ul>
 
             <!-- 로그인 상태 -->
-            <ul class="navbar-nav align-items-center gap-1" sec:authorize="isAuthenticated()">
+            <ul class="navbar-nav navbar-nav-right" sec:authorize="isAuthenticated()">
                 <li class="nav-item">
-                    <a class="btn btn-sm ms-1" th:href="@{/board/write}"
-                       style="background:rgba(255,255,255,.15); color:#fff; border-radius:20px; padding:0.35rem 1rem; font-size:0.85rem; font-weight:600;">
-                        ✏️ 글쓰기
-                    </a>
+                    <a class="nav-link nav-write-btn" th:href="@{/board/write}">✏️ 글쓰기</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/user/mypage}"
@@ -54,13 +53,12 @@
             </ul>
 
             <!-- 비로그인 상태 -->
-            <ul class="navbar-nav align-items-center gap-1" sec:authorize="isAnonymous()">
+            <ul class="navbar-nav navbar-nav-right" sec:authorize="isAnonymous()">
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/auth/login}">로그인</a>
                 </li>
                 <li class="nav-item">
-                    <a class="btn btn-sm btn-outline-light ms-1" th:href="@{/auth/join}"
-                       style="border-radius:20px; padding:0.35rem 0.875rem; font-size:0.875rem;">회원가입</a>
+                    <a class="nav-link nav-join-btn" th:href="@{/auth/join}">회원가입</a>
                 </li>
             </ul>
         </div>
