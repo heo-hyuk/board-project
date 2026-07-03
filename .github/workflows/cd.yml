@@ -1,0 +1,85 @@
+name: CD - 자동 배포
+
+# main 브랜치에 push(머지)될 때 실행
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # 2. Java 21 (Corretto) 설치
+      - name: Java 21 설정
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+          cache: maven
+
+      # 3. 빌드 + 테스트 (main에 들어온 코드도 테스트 통과 확인)
+      - name: 빌드 및 테스트
+        run: mvn clean package --batch-mode
+
+      # 4. SSH 접속을 위한 PEM 키 설정
+      - name: SSH 키 설정
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/lightsail.pem
+          chmod 600 ~/.ssh/lightsail.pem
+          # known_hosts에 서버 등록 (MITM 방지용 fingerprint 확인 무시)
+          ssh-keyscan -H ${{ secrets.LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
+
+      # 5. 빌드된 JAR을 서버로 전송
+      - name: JAR 파일 서버 전송 (SCP)
+        run: |
+          # 빌드된 실행 가능한 JAR 파일 찾기 (plain JAR 제외)
+          JAR_FILE=$(find target -name "*.jar" -not -name "*plain*" | head -1)
+          echo "전송할 JAR: $JAR_FILE"
+
+          ssh -i ~/.ssh/lightsail.pem \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+              "mkdir -p /home/ubuntu/app"
+
+          scp -i ~/.ssh/lightsail.pem \
+              "$JAR_FILE" \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}:/home/ubuntu/app/app.jar
+
+      # 6. 서버에서 앱 재시작
+      - name: 서버 앱 재시작
+        run: |
+          ssh -i ~/.ssh/lightsail.pem \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
+            echo "=== 배포 시작 ==="
+
+            # 기존 프로세스 종료
+            pkill -f "java -jar" 2>/dev/null || true
+            sleep 3
+
+            # 새 버전 실행 (백그라운드, 로그는 app.log에 기록)
+            nohup java -jar /home/ubuntu/app/app.jar \
+              --spring.profiles.active=prod \
+              > /home/ubuntu/app/app.log 2>&1 &
+
+            echo "PID: $!"
+            echo "=== 배포 완료 ==="
+          EOF
+
+      # 7. 배포 완료 확인 (30초 후 헬스체크)
+      - name: 헬스체크
+        run: |
+          echo "30초 후 서버 상태 확인..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                   http://${{ secrets.LIGHTSAIL_HOST }}:8080/board || echo "000")
+          echo "HTTP 상태: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️  헬스체크 실패 (상태: $STATUS) - 로그를 확인하세요"
+            exit 1
+          fi
+          echo "✅ 배포 성공!"

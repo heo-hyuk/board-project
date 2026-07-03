@@ -1,0 +1,4 @@
+spring:
+  sql:
+    init:
+      mode: never  # 테스트 시 schema.sql 실행 안 함 (H2는 JPA ddl-auto로 스키마 생성)
