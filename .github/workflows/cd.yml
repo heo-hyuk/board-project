@@ -36,20 +36,30 @@ jobs:
 
       # 5. JAR 파일 서버 전송
       - name: JAR 파일 서버 전송
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          USER: ${{ secrets.LIGHTSAIL_USER }}
         run: |
-          ssh -i ~/.ssh/lightsail.pem \
-              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
-              "mkdir -p /home/ubuntu/app"
+          # 공백 제거 (Secret 잘못 등록 시 대비)
+          HOST=$(echo "$HOST" | tr -d '[:space:]')
+          USER=$(echo "$USER" | tr -d '[:space:]')
+
+          ssh -i ~/.ssh/lightsail.pem ${USER}@${HOST} "mkdir -p /home/ubuntu/app"
 
           scp -i ~/.ssh/lightsail.pem \
               target/board-project-0.0.1-SNAPSHOT.jar \
-              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}:/home/ubuntu/app/app.jar
+              ${USER}@${HOST}:/home/ubuntu/app/app.jar
 
       # 6. 서버에서 앱 재시작
       - name: 서버 앱 재시작
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          USER: ${{ secrets.LIGHTSAIL_USER }}
         run: |
-          ssh -i ~/.ssh/lightsail.pem \
-              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+          HOST=$(echo "$HOST" | tr -d '[:space:]')
+          USER=$(echo "$USER" | tr -d '[:space:]')
+
+          ssh -i ~/.ssh/lightsail.pem ${USER}@${HOST} \
               "pkill -f 'java -jar' 2>/dev/null || true; sleep 3; \
                nohup java -jar /home/ubuntu/app/app.jar \
                  --spring.profiles.active=prod \
@@ -57,14 +67,17 @@ jobs:
 
       # 7. 헬스체크 (30초 후 서버 응답 확인)
       - name: 헬스체크
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
         run: |
+          HOST=$(echo "$HOST" | tr -d '[:space:]')
           echo "30초 후 서버 상태 확인..."
           sleep 30
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-                   http://${{ secrets.LIGHTSAIL_HOST }}:8080/board || echo "000")
+                   http://${HOST}:8080/board || echo "000")
           echo "HTTP 상태: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "헬스체크 실패 (상태: $STATUS)"
             exit 1
           fi
-          echo "배포 성공!"
+          echo "배포 성공"
