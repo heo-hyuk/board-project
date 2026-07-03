@@ -26,44 +26,36 @@ jobs:
       - name: 빌드 및 테스트
         run: mvn clean package --batch-mode
 
-      # 4. JAR 파일 서버 전송 (appleboy/scp-action이 키 형식 자동 처리)
+      # 4. SSH 키 설정 (Base64 디코딩 → 줄바꿈 문제 완전 해결)
+      - name: SSH 키 설정
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" | base64 -d > ~/.ssh/lightsail.pem
+          chmod 600 ~/.ssh/lightsail.pem
+          ssh-keyscan -H ${{ secrets.LIGHTSAIL_HOST }} >> ~/.ssh/known_hosts
+
+      # 5. JAR 파일 서버 전송
       - name: JAR 파일 서버 전송
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          source: "target/board-project-0.0.1-SNAPSHOT.jar"
-          target: "/home/ubuntu/app/"
-          strip_components: 1   # target/ 경로 제거 → app/board-project-0.0.1-SNAPSHOT.jar
+        run: |
+          ssh -i ~/.ssh/lightsail.pem \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+              "mkdir -p /home/ubuntu/app"
 
-      # 5. 서버에서 파일 이름 변경 + 앱 재시작
+          scp -i ~/.ssh/lightsail.pem \
+              target/board-project-0.0.1-SNAPSHOT.jar \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }}:/home/ubuntu/app/app.jar
+
+      # 6. 서버에서 앱 재시작
       - name: 서버 앱 재시작
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          script: |
-            echo "=== 배포 시작 ==="
+        run: |
+          ssh -i ~/.ssh/lightsail.pem \
+              ${{ secrets.LIGHTSAIL_USER }}@${{ secrets.LIGHTSAIL_HOST }} \
+              "pkill -f 'java -jar' 2>/dev/null || true; sleep 3; \
+               nohup java -jar /home/ubuntu/app/app.jar \
+                 --spring.profiles.active=prod \
+                 > /home/ubuntu/app/app.log 2>&1 & echo PID:\$!"
 
-            # 새 JAR을 app.jar로 교체
-            mv /home/ubuntu/app/board-project-0.0.1-SNAPSHOT.jar \
-               /home/ubuntu/app/app.jar
-
-            # 기존 프로세스 종료
-            pkill -f "java -jar" 2>/dev/null || true
-            sleep 3
-
-            # 새 버전 실행
-            nohup java -jar /home/ubuntu/app/app.jar \
-              --spring.profiles.active=prod \
-              > /home/ubuntu/app/app.log 2>&1 &
-
-            echo "PID: $!"
-            echo "=== 배포 완료 ==="
-
-      # 6. 헬스체크 (30초 후 서버 응답 확인)
+      # 7. 헬스체크 (30초 후 서버 응답 확인)
       - name: 헬스체크
         run: |
           echo "30초 후 서버 상태 확인..."
@@ -72,7 +64,7 @@ jobs:
                    http://${{ secrets.LIGHTSAIL_HOST }}:8080/board || echo "000")
           echo "HTTP 상태: $STATUS"
           if [ "$STATUS" != "200" ]; then
-            echo "헬스체크 실패 (상태: $STATUS) - 로그를 확인하세요"
+            echo "헬스체크 실패 (상태: $STATUS)"
             exit 1
           fi
           echo "배포 성공!"
