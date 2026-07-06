@@ -81,7 +81,8 @@ public class PostService {
         params.put("userId", user.getId());
         postMapper.insertPost(params);
 
-        Long postId = (Long) params.get("id"); // 자동 생성된 PK
+        // MariaDB + MyBatis는 generated key를 BigInteger로 반환하므로 longValue()로 변환
+        Long postId = ((Number) params.get("id")).longValue();
 
         // 태그 처리: JPA로 엔티티 로드 후 M2M 관계 설정
         Post post = postRepository.findById(postId)
