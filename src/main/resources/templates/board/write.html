@@ -107,6 +107,11 @@ const easyMDE = new EasyMDE({
     }
 });
 
+/* 폼 제출 전 EasyMDE 내용을 textarea에 동기화 */
+document.getElementById('writeForm').addEventListener('submit', function() {
+    document.getElementById('content').value = easyMDE.value();
+});
+
 /* 제목 글자 수 카운터 */
 function updateTitleCounter(el) {
     const counter = document.getElementById('titleCounter');
