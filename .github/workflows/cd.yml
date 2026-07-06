@@ -82,17 +82,20 @@ jobs:
             echo "배포 완료"
           ENDSSH
 
-      # 7. 헬스체크 (30초 후 서버 응답 확인)
+      # 7. 헬스체크 (최대 90초, 10초 간격 재시도)
       - name: 헬스체크
         run: |
           HOST=$(echo "$DEPLOY_HOST" | tr -d '[:space:]')
-          echo "30초 후 서버 상태 확인..."
-          sleep 30
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-                   "http://${HOST}:8080/board" || echo "000")
-          echo "HTTP 상태: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "헬스체크 실패 (상태: $STATUS)"
-            exit 1
-          fi
-          echo "배포 성공"
+          echo "서버 기동 대기 중..."
+          for i in $(seq 1 9); do
+            sleep 10
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                     "http://${HOST}:8080/board" || echo "000")
+            echo "시도 ${i}/9 - HTTP 상태: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "배포 성공"
+              exit 0
+            fi
+          done
+          echo "헬스체크 실패 - 서버가 90초 내에 응답하지 않음"
+          exit 1
