@@ -136,11 +136,122 @@ JUnit 5와 Spring Boot Test를 사용했습니다.
 
 ---
 
-## 6. 개선 사항 / 추가 예정
+## 6. REST API + Swagger
+
+**Q. REST API는 왜 추가했나요?**
+
+기존 프로젝트는 Thymeleaf 서버 사이드 렌더링(SSR) 방식으로 구현됐습니다.  
+여기에 REST API 레이어를 추가한 이유는 세 가지입니다.
+
+1. **프론트엔드 분리 대응**: React, Vue 같은 SPA 프레임워크와 연동할 수 있는 구조를 갖추기 위해
+2. **모바일 앱 확장 가능성**: 앱 클라이언트는 HTML이 아닌 JSON 데이터가 필요하기 때문에
+3. **기술 역량 증명**: RESTful API 설계 경험을 직접 구현해 보여주기 위해
+
+---
+
+**Q. REST API 구조는 어떻게 설계했나요?**
+
+`/api/v1/` 접두사로 기존 MVC 컨트롤러와 URL 충돌 없이 공존하도록 설계했습니다.
+
+| 메서드 | URL | 설명 | 인증 |
+|--------|-----|------|------|
+| GET | `/api/v1/posts` | 게시글 목록 (검색/페이지네이션) | 불필요 |
+| GET | `/api/v1/posts/{id}` | 게시글 상세 | 불필요 |
+| POST | `/api/v1/posts` | 게시글 작성 | 필요 |
+| PUT | `/api/v1/posts/{id}` | 게시글 수정 | 필요 (작성자만) |
+| DELETE | `/api/v1/posts/{id}` | 게시글 삭제 | 필요 (작성자만) |
+| GET | `/api/v1/comments?postId=` | 댓글 목록 | 불필요 |
+| POST | `/api/v1/comments` | 댓글 작성 | 필요 |
+| DELETE | `/api/v1/comments/{id}` | 댓글 삭제 | 필요 (작성자만) |
+| GET | `/api/v1/users/me` | 내 정보 조회 | 필요 |
+
+---
+
+**Q. 공통 응답 포맷은 어떻게 처리했나요?**
+
+`ApiResponse<T>` 제네릭 래퍼 클래스로 모든 응답을 통일했습니다.
+
+```json
+{
+  "success": true,
+  "message": "ok",
+  "data": { ... }
+}
+```
+
+성공/실패 여부를 `success` 필드로 구분하므로 클라이언트가 HTTP 상태 코드 외에도 명확하게 결과를 판단할 수 있습니다.  
+에러 응답도 동일한 포맷으로 반환합니다.
+
+```json
+{
+  "success": false,
+  "message": "존재하지 않는 게시글입니다.",
+  "data": null
+}
+```
+
+---
+
+**Q. API 예외 처리는 기존 MVC와 어떻게 분리했나요?**
+
+기존 `GlobalExceptionHandler`는 `@ControllerAdvice`로 View(HTML)를 반환합니다.  
+REST API는 JSON 응답이 필요하므로 `ApiExceptionHandler`를 별도로 만들었습니다.
+
+```java
+@RestControllerAdvice(basePackages = "com.board.api")
+public class ApiExceptionHandler { ... }
+```
+
+`basePackages`를 지정해 `com.board.api` 패키지 하위의 컨트롤러에서 발생한 예외만 처리합니다.  
+Spring은 더 구체적인 핸들러를 우선 적용하므로 기존 핸들러와 충돌이 없습니다.
+
+---
+
+**Q. CSRF 처리는 어떻게 했나요?**
+
+Spring Security의 CSRF 보호는 폼 기반 웹에서 필요하지만, REST API는 세션 쿠키 방식이 아닌  
+`Authorization` 헤더 기반 인증을 사용하는 것이 일반적이므로 API 경로에 한해 CSRF를 비활성화했습니다.
+
+```java
+.csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+```
+
+기존 Thymeleaf 폼에는 CSRF 토큰이 그대로 적용됩니다.
+
+---
+
+**Q. Swagger UI를 도입한 이유가 무엇인가요?**
+
+`springdoc-openapi 2.5.0`을 사용해 자동으로 API 문서를 생성합니다.  
+`/swagger-ui.html`에 접속하면 모든 엔드포인트 목록, 요청/응답 스펙을 확인하고 브라우저에서 직접 호출해볼 수 있습니다.
+
+도입 이유는 두 가지입니다.
+
+1. **문서 자동화**: 코드에 `@Operation(summary = "게시글 작성")` 한 줄만 추가하면 문서가 자동 생성됩니다. 코드와 문서가 항상 일치합니다.
+2. **테스트 편의성**: Postman 없이 브라우저에서 바로 API를 호출해 결과를 확인할 수 있습니다.
+
+---
+
+**Q. 입력값 검증은 어떻게 했나요?**
+
+요청 DTO에 `@Valid` + Bean Validation 어노테이션을 적용했습니다.
+
+```java
+@NotBlank(message = "제목을 입력해주세요.")
+@Size(max = 200, message = "제목은 200자 이내로 입력해주세요.")
+private String title;
+```
+
+검증 실패 시 `MethodArgumentNotValidException`이 발생하고, `ApiExceptionHandler`가 이를 잡아  
+실패한 필드의 메시지를 모아 `ApiResponse.fail("제목을 입력해주세요.")` 형태로 반환합니다.
+
+---
+
+## 7. 개선 사항 / 추가 예정
 
 **Q. 프로젝트에서 아쉬운 점이나 개선하고 싶은 부분이 있나요?**
 
-- **REST API + JWT 인증**: 현재는 세션 기반 인증인데, REST API로 전환하고 JWT를 적용할 계획입니다.  
-- **Redis**: 세션 또는 캐싱 용도로 도입을 고려하고 있습니다.  
-- **좋아요 N+1 문제**: 목록 조회 시 좋아요 수를 별도 쿼리로 가져오는 부분을 JOIN으로 최적화할 수 있습니다.  
+- **JWT 인증**: 현재 REST API는 세션 쿠키 기반 인증인데, Access Token + Refresh Token 방식의 JWT로 전환할 계획입니다.
+- **Redis**: JWT Refresh Token 저장소 또는 조회수/인기글 캐싱 용도로 도입을 고려하고 있습니다.
+- **좋아요 N+1 문제**: 목록 조회 시 좋아요 수를 별도 쿼리로 가져오는 부분을 JOIN으로 최적화할 수 있습니다.
 - **이미지 업로드**: 현재는 텍스트만 작성 가능한데 S3 연동을 통한 이미지 첨부 기능을 추가할 예정입니다.
