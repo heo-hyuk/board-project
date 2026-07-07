@@ -2,13 +2,12 @@ package com.board.api.auth;
 
 import com.board.api.common.ApiResponse;
 import com.board.domain.RefreshToken;
-import com.board.repository.RefreshTokenRepository;
 import com.board.security.JwtTokenProvider;
+import com.board.service.RefreshTokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -26,7 +25,7 @@ public class AuthApiController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenService refreshTokenService;
 
     // POST /api/v1/auth/login — Access Token + Refresh Token 발급
     @PostMapping("/login")
@@ -43,7 +42,7 @@ public class AuthApiController {
             String refreshToken = jwtTokenProvider.generateRefreshToken(username);
 
             // Refresh Token DB 저장 (기존 토큰 있으면 갱신)
-            saveOrUpdateRefreshToken(username, refreshToken);
+            refreshTokenService.saveOrUpdate(username, refreshToken);
 
             return ApiResponse.ok(TokenResponse.builder()
                     .accessToken(accessToken)
@@ -72,8 +71,7 @@ public class AuthApiController {
         String username = jwtTokenProvider.getUsername(refreshToken);
 
         // DB에 저장된 토큰과 일치하는지 확인 (탈취 방지)
-        RefreshToken stored = refreshTokenRepository.findByUsername(username)
-                .orElse(null);
+        RefreshToken stored = refreshTokenService.findByUsername(username);
         if (stored == null || !stored.getToken().equals(refreshToken) || stored.isExpired()) {
             return ApiResponse.fail("Refresh Token이 유효하지 않습니다. 다시 로그인해주세요.");
         }
@@ -81,7 +79,7 @@ public class AuthApiController {
         // 새 토큰 발급 + 기존 Refresh Token Rotation
         String newAccessToken = jwtTokenProvider.generateAccessToken(username);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(username);
-        stored.rotate(newRefreshToken, jwtTokenProvider.getRefreshTokenExpiry());
+        refreshTokenService.saveOrUpdate(username, newRefreshToken);
 
         return ApiResponse.ok(TokenResponse.builder()
                 .accessToken(newAccessToken)
@@ -94,25 +92,10 @@ public class AuthApiController {
     // POST /api/v1/auth/logout — Refresh Token 삭제
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "서버의 Refresh Token 삭제")
-    @Transactional
     public ApiResponse<Void> logout(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails != null) {
-            refreshTokenRepository.deleteByUsername(userDetails.getUsername());
+            refreshTokenService.deleteByUsername(userDetails.getUsername());
         }
         return ApiResponse.ok("로그아웃 되었습니다.");
-    }
-
-    // Refresh Token DB 저장 또는 갱신
-    @Transactional
-    protected void saveOrUpdateRefreshToken(String username, String token) {
-        RefreshToken rt = refreshTokenRepository.findByUsername(username)
-                .orElse(null);
-        if (rt == null) {
-            refreshTokenRepository.save(
-                    RefreshToken.create(username, token, jwtTokenProvider.getRefreshTokenExpiry())
-            );
-        } else {
-            rt.rotate(token, jwtTokenProvider.getRefreshTokenExpiry());
-        }
     }
 }
