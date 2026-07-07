@@ -1,7 +1,6 @@
 package com.board.api.auth;
 
 import com.board.api.common.ApiResponse;
-import com.board.domain.RefreshToken;
 import com.board.security.JwtTokenProvider;
 import com.board.service.RefreshTokenService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +13,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -59,27 +57,17 @@ public class AuthApiController {
     // POST /api/v1/auth/refresh — Access Token 재발급 (Refresh Token Rotation)
     @PostMapping("/refresh")
     @Operation(summary = "토큰 갱신", description = "Refresh Token으로 새 Access Token + Refresh Token 발급")
-    @Transactional
     public ApiResponse<TokenResponse> refresh(@RequestBody RefreshRequest request) {
-        String refreshToken = request.getRefreshToken();
+        String oldRefreshToken = request.getRefreshToken();
 
-        // Refresh Token 유효성 검증
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
-            return ApiResponse.fail("유효하지 않거나 만료된 Refresh Token입니다.");
+        // 검증 + Rotation을 하나의 트랜잭션으로 처리 (null 반환 시 유효하지 않음)
+        String newRefreshToken = refreshTokenService.rotateIfValid(oldRefreshToken);
+        if (newRefreshToken == null) {
+            return ApiResponse.fail("유효하지 않거나 만료된 Refresh Token입니다. 다시 로그인해주세요.");
         }
 
-        String username = jwtTokenProvider.getUsername(refreshToken);
-
-        // DB에 저장된 토큰과 일치하는지 확인 (탈취 방지)
-        RefreshToken stored = refreshTokenService.findByUsername(username);
-        if (stored == null || !stored.getToken().equals(refreshToken) || stored.isExpired()) {
-            return ApiResponse.fail("Refresh Token이 유효하지 않습니다. 다시 로그인해주세요.");
-        }
-
-        // 새 토큰 발급 + 기존 Refresh Token Rotation
+        String username = jwtTokenProvider.getUsername(oldRefreshToken);
         String newAccessToken = jwtTokenProvider.generateAccessToken(username);
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(username);
-        refreshTokenService.saveOrUpdate(username, newRefreshToken);
 
         return ApiResponse.ok(TokenResponse.builder()
                 .accessToken(newAccessToken)
