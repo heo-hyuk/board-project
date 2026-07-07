@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -41,11 +41,12 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Refresh Token 생성 (7일)
+    // Refresh Token 생성 (7일) — jti(UUID)로 동시 생성 시에도 유니크 보장
     public String generateRefreshToken(String username) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(username)
+                .id(UUID.randomUUID().toString()) // 고유 식별자 추가
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshTokenExpiration))
                 .signWith(getSigningKey())
