@@ -26,8 +26,9 @@ public class RefreshTokenService {
                     RefreshToken.create(username, token, jwtTokenProvider.getRefreshTokenExpiry())
             );
         } else {
-            // 기존 토큰 갱신 — 같은 트랜잭션 내 dirty checking으로 자동 반영
+            // 기존 토큰 갱신 — rotate 후 명시적 save로 확실히 반영
             rt.rotate(token, jwtTokenProvider.getRefreshTokenExpiry());
+            refreshTokenRepository.save(rt);
         }
     }
 
