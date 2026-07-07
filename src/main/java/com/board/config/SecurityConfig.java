@@ -4,6 +4,7 @@ import com.board.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,11 +33,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            // API 경로는 CSRF 비활성화 (세션 기반 폼 로그인과 공존)
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/**")
+            )
             .authorizeHttpRequests(auth -> auth
                 // 비로그인 허용 경로
                 .requestMatchers("/", "/auth/**", "/css/**", "/js/**", "/favicon.svg").permitAll()
                 .requestMatchers("/board").permitAll()
                 .requestMatchers("/board/{id:[0-9]+}").permitAll()  // 게시글 상세 조회만 허용
+                // Swagger UI
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // API 읽기 공개 (목록, 상세, 댓글 조회)
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts", "/api/v1/posts/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
                 // 게시글 작성/수정/삭제, 댓글, 좋아요, 마이페이지는 로그인 필요
                 .requestMatchers("/board/write", "/board/*/edit", "/board/*/delete").authenticated()
                 .requestMatchers("/comment/**", "/user/**", "/like/**").authenticated()
