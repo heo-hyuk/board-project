@@ -1,17 +1,21 @@
 package com.board.config;
 
 import com.board.security.CustomUserDetailsService;
+import com.board.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -19,6 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -30,33 +35,52 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    // API 전용 FilterChain (우선순위 높음) - Stateless + JWT
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
-            // API 경로는 CSRF 비활성화 (세션 기반 폼 로그인과 공존)
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**")
+            .securityMatcher("/api/**")
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+            .authorizeHttpRequests(auth -> auth
+                // 로그인/토큰 갱신은 인증 불필요
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
+                // 게시글/댓글 읽기 공개
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts", "/api/v1/posts/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
+                // 나머지 API는 JWT 인증 필요
+                .anyRequest().authenticated()
+            )
+            // JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // MVC 전용 FilterChain (우선순위 낮음) - Stateful + 세션 로그인
+    @Bean
+    @Order(2)
+    public SecurityFilterChain mvcFilterChain(HttpSecurity http) throws Exception {
+        http
             .authorizeHttpRequests(auth -> auth
                 // 비로그인 허용 경로
                 .requestMatchers("/", "/auth/**", "/css/**", "/js/**", "/favicon.svg").permitAll()
                 .requestMatchers("/board").permitAll()
-                .requestMatchers("/board/{id:[0-9]+}").permitAll()  // 게시글 상세 조회만 허용
+                .requestMatchers("/board/{id:[0-9]+}").permitAll()
                 // Swagger UI
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // API 읽기 공개 (목록, 상세, 댓글 조회)
-                .requestMatchers(HttpMethod.GET, "/api/v1/posts", "/api/v1/posts/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/comments").permitAll()
                 // 게시글 작성/수정/삭제, 댓글, 좋아요, 마이페이지는 로그인 필요
                 .requestMatchers("/board/write", "/board/*/edit", "/board/*/delete").authenticated()
                 .requestMatchers("/comment/**", "/user/**", "/like/**").authenticated()
-                // 나머지는 로그인 필요
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
-                .loginPage("/auth/login")          // 커스텀 로그인 페이지
-                .loginProcessingUrl("/auth/login") // 로그인 처리 URL
-                .defaultSuccessUrl("/board", true) // 로그인 성공 시 이동
+                .loginPage("/auth/login")
+                .loginProcessingUrl("/auth/login")
+                .defaultSuccessUrl("/board", true)
                 .failureUrl("/auth/login?error=true")
                 .usernameParameter("username")
                 .passwordParameter("password")
