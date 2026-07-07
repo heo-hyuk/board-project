@@ -19,7 +19,14 @@ public class CommentController {
     public String write(@RequestParam Long postId,
                         @RequestParam String content,
                         @AuthenticationPrincipal UserDetails userDetails) {
-        commentService.write(postId, content, userDetails.getUsername());
+        // 서버 측 검증: 빈 값, 길이 초과
+        if (content == null || content.isBlank()) {
+            return "redirect:/board/" + postId;
+        }
+        if (content.length() > 500) {
+            return "redirect:/board/" + postId;
+        }
+        commentService.write(postId, content.trim(), userDetails.getUsername());
         return "redirect:/board/" + postId;
     }
 

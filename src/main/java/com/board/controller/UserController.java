@@ -31,7 +31,16 @@ public class UserController {
     public String updateNickname(@RequestParam String nickname,
                                  @AuthenticationPrincipal UserDetails userDetails,
                                  RedirectAttributes redirectAttributes) {
-        userService.updateNickname(userDetails.getUsername(), nickname);
+        // 서버 측 검증: 빈 값, 길이 초과
+        if (nickname == null || nickname.isBlank()) {
+            redirectAttributes.addFlashAttribute("errorMsg", "닉네임을 입력해주세요.");
+            return "redirect:/user/mypage";
+        }
+        if (nickname.trim().length() > 20) {
+            redirectAttributes.addFlashAttribute("errorMsg", "닉네임은 20자 이하여야 합니다.");
+            return "redirect:/user/mypage";
+        }
+        userService.updateNickname(userDetails.getUsername(), nickname.trim());
         redirectAttributes.addFlashAttribute("successMsg", "닉네임이 변경되었습니다.");
         return "redirect:/user/mypage";
     }

@@ -42,8 +42,8 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
-    // 태그 목록 (N:M) - EAGER로 Thymeleaf에서 바로 접근 가능
-    @ManyToMany(fetch = FetchType.EAGER)
+    // 태그 목록 (N:M) - open-in-view 활성화 상태이므로 LAZY로 변경 (N+1 방지)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "post_tags",
             joinColumns = @JoinColumn(name = "post_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
