@@ -74,7 +74,14 @@ jobs:
 
           ssh -i ~/.ssh/lightsail.pem ${USER}@${HOST} bash << 'ENDSSH'
             pkill -f "java -jar" 2>/dev/null || true
-            sleep 3
+            # 이전 프로세스가 완전히 종료될 때까지 최대 30초 대기
+            for i in $(seq 1 30); do
+              if ! pgrep -f "java -jar" > /dev/null 2>&1; then
+                echo "이전 프로세스 종료 확인 (${i}초)"
+                break
+              fi
+              sleep 1
+            done
             nohup java -jar /home/ubuntu/app/app.jar \
               --spring.profiles.active=prod \
               > /home/ubuntu/app/app.log 2>&1 &
