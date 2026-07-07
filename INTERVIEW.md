@@ -462,7 +462,119 @@ Jwts.builder()
 
 ---
 
-## 9. 개선 사항 / 추가 예정
+## 9. 코드 감사 및 버그 수정
+
+**Q. 코드 전체를 검토하면서 어떤 버그를 발견하고 수정했나요?**
+
+총 4가지 버그를 발견하고 수정했습니다.
+
+---
+
+**버그 1. API에서 리소스 미존재 시 400 반환 — `NotFoundException` 도입**
+
+**현상**: 존재하지 않는 게시글/댓글/회원을 요청하면 API가 HTTP 400 BAD_REQUEST를 반환
+
+**원인**:  
+`PostService`, `CommentService`, `UserService`에서 리소스를 찾지 못할 때 `IllegalArgumentException`을 던졌고,  
+`ApiExceptionHandler`는 `IllegalArgumentException`을 일괄 400으로 처리했습니다.  
+`IllegalArgumentException`은 "잘못된 입력값"에 적합한 예외이고, "리소스 없음"은 HTTP 404가 의미론적으로 올바릅니다.
+
+```java
+// 수정 전: 모든 비즈니스 예외가 400
+.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+
+// 수정 후: 리소스 없음은 NotFoundException → 404
+.orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
+```
+
+**해결**: `NotFoundException`(커스텀 예외 클래스)을 새로 만들고,  
+`ApiExceptionHandler`에 `@ResponseStatus(HttpStatus.NOT_FOUND)` 핸들러를 추가했습니다.  
+`GlobalExceptionHandler`(MVC용)에도 동일하게 추가해 에러 페이지를 그대로 사용했습니다.
+
+```java
+@ExceptionHandler(NotFoundException.class)
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public ApiResponse<Void> handleNotFound(NotFoundException e) { ... }
+```
+
+---
+
+**버그 2. API 게시글 상세 조회 시 조회수 중복 증가**
+
+**현상**: `GET /api/v1/posts/{id}` 호출마다 조회수가 1씩 올라감  
+(브라우저 상세 페이지 방문 + API 동시 호출 시 조회수 2 증가)
+
+**원인**:  
+`PostApiController.detail()`이 `postService.findById(id)`를 호출했는데,  
+`findById()`는 조회수 증가 목적으로 만들어진 `@Transactional` 메서드였습니다.  
+API 호출도 조회수를 증가시켜 실제 사용자 조회가 아닌 API 요청에 의해 지표가 왜곡됩니다.
+
+```java
+// 수정 전: 조회수 증가 포함
+Post post = postService.findById(id);
+
+// 수정 후: 읽기 전용 조회 (조회수 증가 없음)
+Post post = postService.findByIdReadOnly(id);
+```
+
+---
+
+**버그 3. 자기소개(bio) 서버측 검증 누락**
+
+**현상**: 프론트엔드 `maxlength="200"` 속성이 있지만, HTML 수정 또는 직접 POST 요청으로 무제한 길이 입력 가능
+
+**원인**:  
+`UserController.updateBio()`에 서버측 길이 검증이 전혀 없었습니다.  
+클라이언트 검증(HTML maxlength)은 우회가 가능하므로 서버에서도 반드시 검증해야 합니다.
+
+```java
+// 수정 후: 서버 측 검증 추가
+String trimmedBio = (bio != null) ? bio.trim() : "";
+if (trimmedBio.length() > 200) {
+    redirectAttributes.addFlashAttribute("errorMsg", "소개는 200자 이하여야 합니다.");
+    return "redirect:/user/mypage";
+}
+```
+
+---
+
+**버그 4. 게시글 요약(summary) 서버측 길이 검증 누락**
+
+**현상**: 제목(200자)과 내용(공백 불가)은 서버에서 검증하지만, 요약(summary)은 길이 제한 없이 저장 가능
+
+**원인**:  
+`BoardController`의 write/edit 처리에서 `summary` 파라미터의 길이 검증이 누락되었습니다.  
+API 요청 DTO(`PostCreateRequest`)에는 `@Size(max = 300)` 검증이 있었지만,  
+MVC 폼 처리 경로에는 동일한 검증이 없어 경로에 따라 검증 규칙이 불일치했습니다.
+
+```java
+// 수정 후: MVC 경로에도 summary 길이 검증 추가
+if (summary != null && summary.length() > 300) {
+    model.addAttribute("errorMsg", "요약은 300자 이하여야 합니다.");
+    return "board/write";
+}
+```
+
+---
+
+**Q. HTTP 상태 코드를 의미론적으로 구분하는 것이 왜 중요한가요?**
+
+REST API 클라이언트는 HTTP 상태 코드로 오류 종류를 판단하고 처리 방식을 결정합니다.
+
+| 코드 | 의미 | 사용 예 |
+|------|------|---------|
+| 400 | Bad Request — 요청 자체가 잘못됨 | 필수 파라미터 누락, 형식 오류 |
+| 401 | Unauthorized — 인증 필요 | 토큰 없음/만료 |
+| 403 | Forbidden — 권한 없음 | 다른 사람 게시글 삭제 시도 |
+| 404 | Not Found — 리소스 없음 | 존재하지 않는 게시글 조회 |
+| 409 | Conflict — 충돌 | 중복 아이디 회원가입 |
+
+모든 비즈니스 예외를 400으로 뭉개면 클라이언트가 "없는 게시글"과 "잘못된 요청"을 구분할 수 없어  
+적절한 에러 처리(재요청 vs 다른 화면으로 이동 등)가 불가능합니다.
+
+---
+
+## 11. 개선 사항 / 추가 예정
 
 **Q. 프로젝트에서 아쉬운 점이나 개선하고 싶은 부분이 있나요?**
 
