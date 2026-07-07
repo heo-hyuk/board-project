@@ -14,6 +14,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -22,8 +23,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    // MVC 체인에서만 사용 (JwtAuthenticationFilter는 apiFilterChain 메서드 파라미터로 주입)
     private final CustomUserDetailsService userDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    // JwtAuthenticationFilter를 서블릿 필터로 자동 등록되지 않도록 방지
+    // Spring Security filterChain에서만 수동으로 사용 (addFilterBefore)
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(JwtAuthenticationFilter filter) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false); // 자동 등록 비활성화
+        return registration;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -36,9 +46,10 @@ public class SecurityConfig {
     }
 
     // API 전용 FilterChain (우선순위 높음) - Stateless + JWT
+    // JwtAuthenticationFilter를 메서드 파라미터로 받아 테스트 시 @MockBean으로 대체 가능
     @Bean
     @Order(1)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain apiFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
             .securityMatcher("/api/**")
             .csrf(csrf -> csrf.disable())
