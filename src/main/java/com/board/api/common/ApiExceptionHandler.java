@@ -1,5 +1,6 @@
 package com.board.api.common;
 
+import com.board.exception.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,15 @@ import java.util.stream.Collectors;
 @RestControllerAdvice(basePackages = "com.board.api")
 public class ApiExceptionHandler {
 
-    // 비즈니스 예외 (존재하지 않는 게시글, 권한 없음 등)
+    // 리소스를 찾을 수 없음 (404)
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<Void> handleNotFound(NotFoundException e) {
+        log.warn("API 리소스 없음: {}", e.getMessage());
+        return ApiResponse.fail(e.getMessage());
+    }
+
+    // 비즈니스 예외 (권한 없음, 잘못된 요청 등)
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleIllegalArgument(IllegalArgumentException e) {

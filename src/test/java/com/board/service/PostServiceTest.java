@@ -4,6 +4,7 @@ import com.board.domain.Post;
 import com.board.domain.PostLike;
 import com.board.domain.User;
 import com.board.dto.PostSearchDto;
+import com.board.exception.NotFoundException;
 import com.board.mapper.PostMapper;
 import com.board.repository.PostLikeRepository;
 import com.board.repository.PostRepository;
@@ -71,7 +72,7 @@ class PostServiceTest {
 
         // when & then
         assertThatThrownBy(() -> postService.findById(99L))
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(NotFoundException.class)
             .hasMessage("존재하지 않는 게시글입니다.");
     }
 

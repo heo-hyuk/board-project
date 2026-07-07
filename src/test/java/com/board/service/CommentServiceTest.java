@@ -3,6 +3,7 @@ package com.board.service;
 import com.board.domain.Comment;
 import com.board.domain.Post;
 import com.board.domain.User;
+import com.board.exception.NotFoundException;
 import com.board.repository.CommentRepository;
 import com.board.repository.PostRepository;
 import com.board.repository.UserRepository;
@@ -71,7 +72,7 @@ class CommentServiceTest {
 
         // when & then
         assertThatThrownBy(() -> commentService.write(99L, "댓글 내용", "testuser"))
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(NotFoundException.class)
             .hasMessage("존재하지 않는 게시글입니다.");
     }
 
@@ -112,7 +113,7 @@ class CommentServiceTest {
 
         // when & then
         assertThatThrownBy(() -> commentService.delete(99L, "testuser"))
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(NotFoundException.class)
             .hasMessage("존재하지 않는 댓글입니다.");
     }
 }

@@ -62,10 +62,16 @@ public class UserController {
 
     // 자기소개 변경
     @PostMapping("/bio")
-    public String updateBio(@RequestParam String bio,
+    public String updateBio(@RequestParam(required = false) String bio,
                             @AuthenticationPrincipal UserDetails userDetails,
                             RedirectAttributes redirectAttributes) {
-        userService.updateBio(userDetails.getUsername(), bio);
+        // null이면 빈 문자열로 처리 (소개 삭제 허용)
+        String trimmedBio = (bio != null) ? bio.trim() : "";
+        if (trimmedBio.length() > 200) {
+            redirectAttributes.addFlashAttribute("errorMsg", "소개는 200자 이하여야 합니다.");
+            return "redirect:/user/mypage";
+        }
+        userService.updateBio(userDetails.getUsername(), trimmedBio.isEmpty() ? null : trimmedBio);
         redirectAttributes.addFlashAttribute("successMsg", "소개가 변경되었습니다.");
         return "redirect:/user/mypage";
     }

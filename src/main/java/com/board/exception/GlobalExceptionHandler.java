@@ -11,7 +11,15 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 비즈니스 예외 처리 (존재하지 않는 게시글, 권한 없음 등)
+    // 리소스를 찾을 수 없음 (게시글, 댓글 등 not found)
+    @ExceptionHandler(NotFoundException.class)
+    public String handleNotFound(NotFoundException e, Model model) {
+        log.warn("리소스 없음: {}", e.getMessage());
+        model.addAttribute("errorMsg", e.getMessage());
+        return "error/business-error";
+    }
+
+    // 비즈니스 예외 처리 (권한 없음, 잘못된 요청 등)
     @ExceptionHandler(IllegalArgumentException.class)
     public String handleIllegalArgument(IllegalArgumentException e, Model model) {
         log.warn("비즈니스 예외 발생: {}", e.getMessage());

@@ -6,6 +6,7 @@ import com.board.domain.Tag;
 import com.board.domain.User;
 import com.board.dto.PostDto;
 import com.board.dto.PostSearchDto;
+import com.board.exception.NotFoundException;
 import com.board.mapper.PostMapper;
 import com.board.repository.PostLikeRepository;
 import com.board.repository.PostRepository;
@@ -50,7 +51,7 @@ public class PostService {
     @Transactional
     public Post findById(Long id) {
         Post post = postRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
         post.increaseViewCount();
         return post;
     }
@@ -58,7 +59,7 @@ public class PostService {
     // 게시글 조회 (조회수 증가 없음) - 수정 페이지 등에서 사용
     public Post findByIdReadOnly(Long id) {
         return postRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
     }
 
     // 홈 화면 최신 포스트 6개 (JPA)
@@ -70,7 +71,7 @@ public class PostService {
     @Transactional
     public Long write(String title, String summary, String content, String category, String tagString, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 회원입니다."));
 
         // MyBatis로 게시글 INSERT (useGeneratedKeys로 생성된 ID 획득)
         Map<String, Object> params = new HashMap<>();
@@ -96,7 +97,7 @@ public class PostService {
     public void update(Long postId, String title, String summary, String content, String category, String tagString, String username) {
         // 권한 확인: JPA로 엔티티 조회
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("수정 권한이 없습니다.");
         }
@@ -119,7 +120,7 @@ public class PostService {
     public void delete(Long postId, String username) {
         // 권한 확인: JPA로 엔티티 조회
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
         if (!post.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("삭제 권한이 없습니다.");
         }
@@ -132,7 +133,7 @@ public class PostService {
     // 내가 작성한 게시글 목록 (JPA)
     public List<Post> findMyPosts(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 회원입니다."));
         return postRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
@@ -144,9 +145,9 @@ public class PostService {
     @Transactional
     public boolean toggleLike(Long postId, String username) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 회원입니다."));
 
         return postLikeRepository.findByPostAndUser(post, user)
                 .map(like -> {
@@ -162,7 +163,7 @@ public class PostService {
     // 좋아요 수 조회
     public int getLikeCount(Long postId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
         return postLikeRepository.countByPost(post);
     }
 

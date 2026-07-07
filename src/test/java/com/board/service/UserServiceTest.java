@@ -1,6 +1,7 @@
 package com.board.service;
 
 import com.board.domain.User;
+import com.board.exception.NotFoundException;
 import com.board.dto.UserJoinDto;
 import com.board.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -103,7 +104,7 @@ class UserServiceTest {
 
         // when & then
         assertThatThrownBy(() -> userService.findByUsername("unknown"))
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(NotFoundException.class)
             .hasMessage("존재하지 않는 회원입니다.");
     }
 

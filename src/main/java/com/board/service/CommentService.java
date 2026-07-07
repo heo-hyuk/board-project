@@ -4,6 +4,7 @@ import com.board.domain.Comment;
 import com.board.domain.Post;
 import com.board.domain.User;
 import com.board.dto.CommentDto;
+import com.board.exception.NotFoundException;
 import com.board.repository.CommentRepository;
 import com.board.repository.PostRepository;
 import com.board.repository.UserRepository;
@@ -26,7 +27,7 @@ public class CommentService {
     // 댓글 목록 조회 (JPA)
     public List<CommentDto> findByPost(Long postId) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
 
         return commentRepository.findByPostOrderByCreatedAtAsc(post).stream()
                 .map(c -> {
@@ -49,9 +50,9 @@ public class CommentService {
             throw new IllegalArgumentException("댓글 내용을 입력해주세요.");
         }
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 게시글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 게시글입니다."));
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 회원입니다."));
         commentRepository.save(Comment.create(content.trim(), post, user));
     }
 
@@ -59,7 +60,7 @@ public class CommentService {
     @Transactional
     public void delete(Long commentId, String username) {
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 댓글입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 댓글입니다."));
         if (!comment.getUser().getUsername().equals(username)) {
             throw new IllegalArgumentException("삭제 권한이 없습니다.");
         }

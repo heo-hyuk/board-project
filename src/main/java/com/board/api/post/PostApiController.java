@@ -47,7 +47,8 @@ public class PostApiController {
     @GetMapping("/{id}")
     @Operation(summary = "게시글 상세 조회")
     public ApiResponse<PostResponse> detail(@PathVariable Long id) {
-        Post post = postService.findById(id);
+        // API 조회는 조회수 증가 없이 읽기 전용으로 처리
+        Post post = postService.findByIdReadOnly(id);
         int likeCount = postService.getLikeCount(id);
         return ApiResponse.ok(PostResponse.from(post, likeCount));
     }

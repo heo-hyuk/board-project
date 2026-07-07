@@ -2,6 +2,7 @@ package com.board.service;
 
 import com.board.domain.User;
 import com.board.dto.UserJoinDto;
+import com.board.exception.NotFoundException;
 import com.board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,7 +36,7 @@ public class UserService {
     // 아이디로 회원 조회
     public User findByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new NotFoundException("존재하지 않는 회원입니다."));
     }
 
     // 닉네임 수정

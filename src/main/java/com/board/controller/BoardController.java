@@ -75,6 +75,10 @@ public class BoardController {
             model.addAttribute("errorMsg", "제목은 1~200자 이내로 입력해주세요.");
             return "board/write";
         }
+        if (summary != null && summary.length() > 300) {
+            model.addAttribute("errorMsg", "요약은 300자 이하여야 합니다.");
+            return "board/write";
+        }
         if (content.isBlank()) {
             model.addAttribute("errorMsg", "내용을 입력해주세요.");
             return "board/write";
@@ -110,6 +114,11 @@ public class BoardController {
                        Model model) {
         if (title.isBlank() || title.length() > 200) {
             model.addAttribute("errorMsg", "제목은 1~200자 이내로 입력해주세요.");
+            model.addAttribute("post", postService.findByIdReadOnly(id));
+            return "board/edit";
+        }
+        if (summary != null && summary.length() > 300) {
+            model.addAttribute("errorMsg", "요약은 300자 이하여야 합니다.");
             model.addAttribute("post", postService.findByIdReadOnly(id));
             return "board/edit";
         }
