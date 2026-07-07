@@ -39,8 +39,9 @@ class BoardControllerTest {
 
     @MockBean private PostService postService;
     @MockBean private CommentService commentService;
-    // SecurityConfig가 CustomUserDetailsService를 주입하므로 @MockBean 필수
+    // SecurityConfig가 CustomUserDetailsService, JwtAuthenticationFilter를 주입하므로 @MockBean 필수
     @MockBean private CustomUserDetailsService customUserDetailsService;
+    @MockBean private com.board.security.JwtAuthenticationFilter jwtAuthenticationFilter;
     // @MapperScan으로 등록된 PostMapper가 SqlSessionFactory 없이 실패하는 것을 방지
     @MockBean private PostMapper postMapper;
 
