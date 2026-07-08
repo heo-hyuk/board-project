@@ -1240,3 +1240,39 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+
+/* ===========================
+   지식나눔 게시판
+   =========================== */
+.knowledge-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    cursor: pointer;
+}
+.knowledge-card:hover {
+    border-color: #86efac;
+    box-shadow: 0 4px 16px rgba(22,163,74,.1);
+}
+.knowledge-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.knowledge-card-excerpt {
+    font-size: 0.875rem;
+    margin: 0;
+    line-height: 1.5;
+}
+.branch-card {
+    background: var(--bg-card);
+    border: 1px solid #d1fae5;
+    border-left: 3px solid #16a34a;
+    border-radius: 10px;
+    transition: box-shadow 0.2s;
+}
+.branch-card:hover {
+    box-shadow: 0 2px 12px rgba(22,163,74,.1);
+}

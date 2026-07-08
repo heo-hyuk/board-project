@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${post.title} + ' - 지식나눔'">지식나눔</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+<div th:replace="~{layout/base :: navbar('knowledge')}"></div>
+
+<div class="container mt-4 mb-5" style="max-width: 860px;">
+
+    <!-- 성공 메시지 -->
+    <div th:if="${successMsg}" class="alert alert-success alert-auto-close" th:text="${successMsg}"></div>
+
+    <!-- 원본 글 -->
+    <div class="article-header">
+        <h1 class="article-title" th:text="${post.title}"></h1>
+        <div class="article-meta">
+            <div class="article-author-box">
+                <div class="author-avatar"
+                     th:text="${#strings.substring(post.nickname, 0, 1).toUpperCase()}">A</div>
+                <div>
+                    <div class="article-author-name" th:text="${post.nickname}"></div>
+                    <div class="article-date">
+                        <span class="rel-time"
+                              th:attr="data-time=${#temporals.format(post.createdAt,'yyyy-MM-dd''T''HH:mm:ss')}"
+                              th:text="${#temporals.format(post.createdAt,'yyyy.MM.dd HH:mm')}"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="article-view-badge ms-auto">
+                👁 <span th:text="${post.viewCount}"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 원본 본문 -->
+    <div class="card mb-3">
+        <div class="card-body" style="padding:2rem;">
+            <div class="markdown-render" th:attr="data-raw-id='raw-root'"></div>
+            <div id="raw-root" th:text="${post.content}" style="display:none;"></div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <a th:href="@{/knowledge}" class="btn btn-outline-secondary btn-sm">← 목록</a>
+            <div class="d-flex gap-2">
+                <!-- 작성자만 삭제 가능 -->
+                <form th:if="${isAuthor}"
+                      th:action="@{/knowledge/{id}/delete(id=${post.id})}" method="post"
+                      onsubmit="return confirm('글을 삭제하시겠습니까? 모든 브랜치도 함께 삭제됩니다.')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                </form>
+                <!-- 로그인 시 브랜치 달기 -->
+                <a th:href="@{/knowledge/{id}/branch(id=${post.id})}"
+                   sec:authorize="isAuthenticated()"
+                   class="btn btn-sm btn-dark">🌿 브랜치 달기</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 브랜치 섹션 -->
+    <div class="mb-2 d-flex align-items-center gap-2">
+        <span class="comment-section-title">브랜치</span>
+        <span class="comment-count-pill" th:text="${#lists.size(branches)}"></span>
+    </div>
+
+    <!-- 브랜치가 없을 때 -->
+    <div th:if="${#lists.isEmpty(branches)}" class="empty-state" style="padding:2rem 1rem;">
+        <div class="empty-state-icon">🌱</div>
+        <div class="empty-state-text">아직 브랜치가 없습니다. 첫 번째 브랜치를 달아보세요!</div>
+        <a th:href="@{/knowledge/{id}/branch(id=${post.id})}"
+           sec:authorize="isAuthenticated()"
+           class="btn btn-dark btn-sm mt-3">🌿 브랜치 달기</a>
+    </div>
+
+    <!-- 브랜치 목록 (DFS 순서, depth 기반 들여쓰기) -->
+    <div class="d-flex flex-column gap-3">
+        <div th:each="branch : ${branches}"
+             th:style="'margin-left: ' + ${(branch.depth - 1) * 28} + 'px'">
+
+            <!-- 브랜치 연결선 표시 -->
+            <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.8rem; color:var(--text-light);">
+                <span th:if="${branch.depth > 1}" style="color:#6b7280;">└─</span>
+                <span style="color:#16a34a; font-weight:600;">🌿 브랜치</span>
+                <span class="fw-semibold" style="color:var(--text);" th:text="${branch.nickname}"></span>
+                <span>·</span>
+                <span class="rel-time"
+                      th:attr="data-time=${#temporals.format(branch.createdAt,'yyyy-MM-dd''T''HH:mm:ss')}"
+                      th:text="${#temporals.format(branch.createdAt,'yyyy.MM.dd HH:mm')}"></span>
+                <!-- 브랜치 이름 (관점) -->
+                <span th:if="${branch.branchName != null and !#strings.isEmpty(branch.branchName)}"
+                      class="badge ms-1"
+                      style="background:#f0fdf4; color:#16a34a; border:1px solid #86efac; font-weight:500;"
+                      th:text="${branch.branchName}"></span>
+            </div>
+
+            <!-- 브랜치 본문 -->
+            <div class="card branch-card">
+                <div class="card-body" style="padding:1.5rem;">
+                    <h6 class="fw-bold mb-3" th:text="${branch.title}"></h6>
+                    <div class="markdown-render" th:attr="data-raw-id=${'raw-' + branch.id}"></div>
+                    <div th:id="'raw-' + branch.id" th:text="${branch.content}" style="display:none;"></div>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                    <span style="font-size:0.8rem; color:var(--text-light);">
+                        👁 <span th:text="${branch.viewCount}"></span>
+                    </span>
+                    <div class="d-flex gap-2">
+                        <!-- 브랜치 작성자만 삭제 가능 -->
+                        <form th:if="${loginUsername != null and loginUsername == branch.username}"
+                              th:action="@{/knowledge/{id}/delete(id=${branch.id})}" method="post"
+                              onsubmit="return confirm('브랜치를 삭제하시겠습니까?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                        </form>
+                        <!-- 이 브랜치에 달기 -->
+                        <a th:href="@{/knowledge/{id}/branch(id=${branch.id})}"
+                           sec:authorize="isAuthenticated()"
+                           class="btn btn-sm btn-outline-success">🌿 이 브랜치에 달기</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 비로그인 브랜치 안내 -->
+    <div class="text-center mt-4" sec:authorize="isAnonymous()">
+        <span class="text-muted" style="font-size:0.875rem;">
+            <a th:href="@{/auth/login}" style="color:var(--accent); font-weight:600;">로그인</a> 후 브랜치를 달 수 있습니다.
+        </span>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.0/dist/purify.min.js"></script>
+<script>
+/* 마크다운 설정 */
+marked.setOptions({ breaks: true, gfm: true });
+
+/* 모든 markdown-render 영역 렌더링 */
+document.querySelectorAll('.markdown-render').forEach(div => {
+    const rawId = div.getAttribute('data-raw-id');
+    const rawEl = document.getElementById(rawId);
+    if (!rawEl) return;
+    div.innerHTML = DOMPurify.sanitize(marked.parse(rawEl.textContent));
+    div.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+});
+
+/* 상대 시간 */
+function relativeTime(dateStr) {
+    const now = new Date(), past = new Date(dateStr);
+    const diff = Math.floor((now - past) / 1000);
+    if (diff < 60)        return '방금 전';
+    if (diff < 3600)      return Math.floor(diff / 60) + '분 전';
+    if (diff < 86400)     return Math.floor(diff / 3600) + '시간 전';
+    if (diff < 86400 * 7) return Math.floor(diff / 86400) + '일 전';
+    return dateStr.substring(0, 10);
+}
+document.querySelectorAll('.rel-time').forEach(el => {
+    const t = el.getAttribute('data-time');
+    if (t) el.textContent = relativeTime(t);
+});
+
+document.querySelectorAll('.alert-auto-close').forEach(el => setTimeout(() => el.remove(), 4000));
+</script>
+</body>
+</html>

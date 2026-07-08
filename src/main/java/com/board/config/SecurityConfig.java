@@ -87,6 +87,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/auth/**", "/css/**", "/js/**", "/favicon.svg").permitAll()
                 .requestMatchers("/board").permitAll()
                 .requestMatchers("/board/{id:[0-9]+}").permitAll()
+                .requestMatchers("/knowledge", "/knowledge/{id:[0-9]+}").permitAll()
                 // Swagger UI
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 // 게시글 작성/수정/삭제, 댓글, 좋아요, 마이페이지는 로그인 필요

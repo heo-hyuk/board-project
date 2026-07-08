@@ -1,5 +1,6 @@
 package com.board.config;
 
+import com.board.mapper.KnowledgePostMapper;
 import com.board.mapper.PostMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +21,18 @@ import org.springframework.stereotype.Component;
 public class DatabaseInitializer implements ApplicationRunner {
 
     private final PostMapper postMapper;
+    private final KnowledgePostMapper knowledgePostMapper;
 
     @Override
     public void run(ApplicationArguments args) {
+
+        // [CREATE] 지식나눔 게시글 테이블 생성
+        try {
+            knowledgePostMapper.createKnowledgePostsTable();
+            log.info("[DDL] knowledge_posts 테이블 생성 완료 (CREATE TABLE IF NOT EXISTS)");
+        } catch (Exception e) {
+            log.warn("[DDL] knowledge_posts 테이블 생성 스킵: {}", e.getMessage());
+        }
 
         // [CREATE] 게시글 통계 테이블 생성
         try {
