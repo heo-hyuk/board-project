@@ -1,7 +1,8 @@
 # CodeLog — 기술 블로그 플랫폼
 
 Java/Spring 기술 스택으로 구현한 포트폴리오 프로젝트입니다.  
-마크다운 기반 글쓰기, 카테고리/태그 분류, 좋아요·댓글 등 실서비스 수준의 기능을 갖춘 기술 블로그 플랫폼입니다.
+마크다운 기반 글쓰기, 카테고리/태그 분류, 좋아요·댓글 등 실서비스 수준의 기능을 갖춘 기술 블로그 플랫폼입니다.  
+**지식나눔 게시판**에서는 다른 사람의 글을 Git처럼 브랜치해서 지식을 함께 발전시킬 수 있습니다.
 
 🔗 **배포 주소:** http://43.201.55.31:8080
 
@@ -43,6 +44,14 @@ Java/Spring 기술 스택으로 구현한 포트폴리오 프로젝트입니다.
 - 제목 / 내용 / 통합 검색 (MyBatis 동적 쿼리)
 - 카테고리·태그 필터 + 페이지네이션
 
+### 지식나눔 게시판 (브랜치 기능)
+- **Git-like 브랜치** — 다른 사람의 글을 원본 내용 그대로 가져와 수정·보완 후 브랜치로 등록
+- **브랜치 트리 인라인 표시** — 원본 글 상세 페이지에 브랜치가 댓글처럼 달리며, depth 기반 들여쓰기로 계보 표현
+- **중첩 브랜치** — 브랜치에 다시 브랜치를 달아 무한 깊이의 지식 확장 가능
+- **브랜치 관점 설명** — 어떤 관점으로 발전시켰는지 한 줄 메모 기능
+- 브랜치 작성 시 원본 내용이 에디터에 미리 채워져 즉시 편집 가능
+- DFS 순서로 브랜치 트리를 조립하여 원본-파생 흐름을 자연스럽게 표현
+
 <br>
 
 ## 기술적 특징
@@ -60,10 +69,23 @@ Java/Spring 기술 스택으로 구현한 포트폴리오 프로젝트입니다.
 ### DB 스키마 자동 관리 (DatabaseInitializer)
 앱 시작 시 `DatabaseInitializer`가 MyBatis Mapper를 통해 DDL을 실행합니다.
 - `CREATE TABLE post_stats` — 일별 조회 통계 테이블
+- `CREATE TABLE knowledge_posts` — 지식나눔 브랜치 게시글 테이블
 - `ALTER TABLE posts ADD COLUMN thumbnail_url` — 컬럼 추가
 - `CREATE INDEX idx_posts_category` — 카테고리 조회 성능 향상
 - `CREATE INDEX idx_posts_created_at` — 최신순 정렬 성능 향상
 - `CREATE OR REPLACE VIEW v_post_summary` — posts + users JOIN 뷰
+
+### 지식나눔 브랜치 트리 설계
+`knowledge_posts` 테이블 하나로 자기참조(self-referencing) 트리를 구성합니다.
+
+| 컬럼 | 역할 |
+|------|------|
+| `parent_id` | 부모 글 ID (NULL = 원본) |
+| `root_id` | 원본 글 ID (트리 전체 조회 키) |
+| `depth` | 브랜치 깊이 (0=원본, 1=1차 브랜치, ...) |
+| `branch_name` | 브랜치 관점 설명 |
+
+서비스 레이어에서 DFS 순회로 평탄화한 리스트를 반환하고, 뷰에서 `depth` 기반 들여쓰기로 트리를 표현합니다.
 
 ### Spring Security 6
 BCrypt 비밀번호 암호화, 경로별 접근 권한 제어, CSRF 보호, `CustomUserDetailsService` DB 기반 인증
@@ -80,16 +102,22 @@ src/main/java/com/board
 ├── config/          # SecurityConfig, DatabaseInitializer (DDL 자동 실행)
 ├── controller/      # BoardController, AuthController, CommentController
 │                      LikeController, UserController, HomeController
+│                      KnowledgeController (지식나눔 브랜치 게시판)
 ├── domain/          # Post, User, Comment, Tag, PostLike
+│                      KnowledgePost (자기참조 브랜치 트리 엔티티)
 ├── dto/             # PostDto, PostSearchDto, CommentDto, UserJoinDto
+│                      KnowledgePostDto, KnowledgeSearchDto
 ├── exception/       # GlobalExceptionHandler
-├── mapper/          # PostMapper.java + PostMapper.xml (MyBatis CRUD + DDL + 데이터사전)
-├── repository/      # JPA Repository 인터페이스 5개
+├── mapper/          # PostMapper.java + PostMapper.xml
+│                      KnowledgePostMapper.java + KnowledgePostMapper.xml
+├── repository/      # JPA Repository 인터페이스 6개
 └── service/         # PostService, CommentService, UserService
+                       KnowledgePostService (DFS 트리 조립 포함)
 
 src/main/resources
-├── mapper/          # PostMapper.xml
+├── mapper/          # PostMapper.xml, KnowledgePostMapper.xml
 ├── templates/       # Thymeleaf 템플릿
+│   └── knowledge/   # list, detail, write, branch
 ├── static/css/      # style.css
 ├── schema.sql       # 전체 스키마 문서
 └── application.yml
@@ -119,6 +147,14 @@ post_tags   — post_id(FK), tag_id(FK)   [N:M]
 post_likes  — id, post_id(FK), user_id(FK), UNIQUE(post_id,user_id)
 post_stats  — id, post_id(FK), view_date, view_count  [일별 통계]
 
+knowledge_posts  [지식나눔 브랜치 트리]
+ ├── id, title, content, branch_name
+ ├── user_id (FK → users, CASCADE)
+ ├── parent_id (자기참조 — NULL이면 원본 글)
+ ├── root_id   (원본 글 ID — 브랜치 전체 조회 키)
+ ├── depth     (0=원본, 1=1차 브랜치, 2=2차 브랜치, ...)
+ └── view_count, created_at, updated_at
+
 [인덱스]
 idx_posts_category   ON posts(category)
 idx_posts_created_at ON posts(created_at DESC)
@@ -140,6 +176,10 @@ v_post_summary — posts + users JOIN (category, view_count, comment_count, like
 | 로그인 | `/auth/login` | — |
 | 회원가입 | `/auth/join` | — |
 | 마이페이지 | `/user/mypage` | 개발자 프로필 + 설정 |
+| 지식나눔 목록 | `/knowledge` | 원본 글 목록 + 브랜치 수 뱃지 |
+| 지식나눔 상세 | `/knowledge/{id}` | 본문 + 브랜치 트리 인라인 표시 |
+| 지식나눔 글쓰기 | `/knowledge/write` | 새 원본 글 작성 |
+| 브랜치 달기 | `/knowledge/{id}/branch` | 원본 내용 미리채움 + 브랜치 등록 |
 
 <br>
 
