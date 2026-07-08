@@ -2,6 +2,7 @@ package com.board.repository;
 
 import com.board.domain.Post;
 import com.board.domain.User;
+import com.board.mapper.KnowledgePostMapper;
 import com.board.mapper.PostMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,8 +23,9 @@ class PostRepositoryTest {
     @Autowired private PostRepository postRepository;
     @Autowired private UserRepository userRepository;
 
-    // @MapperScan으로 등록된 PostMapper가 SqlSessionFactory 없이 실패하는 것을 방지
+    // @MapperScan으로 등록된 MyBatis 매퍼가 SqlSessionFactory 없이 실패하는 것을 방지
     @MockBean private PostMapper postMapper;
+    @MockBean private KnowledgePostMapper knowledgePostMapper;
 
     private User savedUser;
 

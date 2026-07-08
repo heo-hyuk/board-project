@@ -31,8 +31,9 @@ class AuthControllerTest {
     @MockBean private CustomUserDetailsService customUserDetailsService;
     @MockBean private com.board.security.JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockBean private UserService userService;
-    // @MapperScan으로 등록된 PostMapper가 SqlSessionFactory 없이 실패하는 것을 방지
+    // @MapperScan으로 등록된 MyBatis 매퍼가 SqlSessionFactory 없이 실패하는 것을 방지
     @MockBean private PostMapper postMapper;
+    @MockBean private com.board.mapper.KnowledgePostMapper knowledgePostMapper;
 
     @Test
     @DisplayName("GET /auth/login - 로그인 페이지 반환")
