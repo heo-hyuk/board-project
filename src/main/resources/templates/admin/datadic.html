@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>데이터사전 - CodeLog</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+<div th:replace="~{layout/base :: navbar('datadic')}"></div>
+
+<div class="container mt-4 mb-5">
+
+    <div th:if="${successMsg}" class="alert alert-success alert-auto-close" th:text="${successMsg}"></div>
+
+    <h5 class="fw-bold mb-1">데이터사전 (INFORMATION_SCHEMA)</h5>
+    <p class="text-muted mb-4" style="font-size:0.85rem;">
+        현재 접속 스키마: <code th:text="${dic.schema}"></code>
+    </p>
+
+    <!-- 테이블 목록 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">테이블 목록</div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                <tr><th>테이블명</th><th>행 수</th><th>코멘트</th><th>생성일시</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="t : ${dic.tables}">
+                    <td th:text="${t.tableName}"></td>
+                    <td th:text="${t.tableRows}"></td>
+                    <td th:text="${t.tableComment}"></td>
+                    <td th:text="${t.createTime}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 인덱스 목록 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">인덱스 목록</div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                <tr><th>테이블명</th><th>인덱스명</th><th>컬럼명</th><th>UNIQUE 여부</th><th>타입</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="i : ${dic.indexes}">
+                    <td th:text="${i.tableName}"></td>
+                    <td th:text="${i.indexName}"></td>
+                    <td th:text="${i.columnName}"></td>
+                    <td th:text="${i.nonUnique == 0 ? 'UNIQUE' : '-'}"></td>
+                    <td th:text="${i.indexType}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 뷰 목록 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">뷰 목록</div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                <tr><th>뷰명</th><th>수정 가능 여부</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="v : ${dic.views}">
+                    <td th:text="${v.viewName}"></td>
+                    <td th:text="${v.isUpdatable}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 외래키(FK) 목록 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">외래키(FK) 제약조건 목록</div>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                <tr><th>테이블명</th><th>컬럼명</th><th>제약조건명</th><th>참조 테이블</th><th>참조 컬럼</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="f : ${dic.foreignKeys}">
+                    <td th:text="${f.tableName}"></td>
+                    <td th:text="${f.columnName}"></td>
+                    <td th:text="${f.constraintName}"></td>
+                    <td th:text="${f.referencedTableName}"></td>
+                    <td th:text="${f.referencedColumnName}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- DDL 동작 데모 -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">DDL 동작 확인 (post_stats 테이블)</div>
+        <div class="card-body">
+            <p class="text-muted mb-3" style="font-size:0.85rem;">
+                버튼을 누르면 <code>DROP TABLE post_stats</code> → <code>CREATE TABLE post_stats</code>가 실제로 실행됩니다.
+                (post_stats는 서비스 로직에서 사용하지 않는 DDL 검증 전용 테이블이라 안전하게 실행할 수 있습니다.)
+            </p>
+            <form th:action="@{/admin/datadic/ddl-demo}" method="post" class="mb-0">
+                <button type="submit" class="btn btn-outline-dark btn-sm">DROP → CREATE 실행</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

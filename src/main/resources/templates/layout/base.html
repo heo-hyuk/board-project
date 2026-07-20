@@ -50,6 +50,10 @@
                        th:classappend="${currentPage == 'mypage'} ? 'active'">마이페이지</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" th:href="@{/admin/datadic}"
+                       th:classappend="${currentPage == 'datadic'} ? 'active'">데이터사전</a>
+                </li>
+                <li class="nav-item">
                     <form th:action="@{/auth/logout}" method="post" class="mb-0">
                         <button type="submit" class="nav-btn-logout">로그아웃</button>
                     </form>

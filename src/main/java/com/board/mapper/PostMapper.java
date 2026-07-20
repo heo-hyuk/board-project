@@ -65,4 +65,10 @@ public interface PostMapper {
 
     // 뷰 목록 조회
     List<Map<String, Object>> selectViewList(@Param("schema") String schema);
+
+    // 현재 접속 중인 스키마명 조회
+    String selectCurrentSchema();
+
+    // 외래키(FK) 제약조건 목록 조회
+    List<Map<String, Object>> selectForeignKeyList(@Param("schema") String schema);
 }
